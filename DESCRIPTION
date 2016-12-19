@@ -11,17 +11,17 @@ Imports:
     data.table,
     ggplot2,
     ggiraph,
+    longGriDiSL,
     methods,
     R6,
-    Rcpp,
     rmarkdown,
     pander,
     speedglm,
     stats,
     stringr,
     zoo
-LinkingTo: Rcpp
 Suggests:
+    brokenstick,
     h2o,
     face,
     knitr,

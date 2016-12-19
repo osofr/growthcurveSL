@@ -1,12 +1,3 @@
-#' @useDynLib growthcurveSL
-#' @import R6
-#' @importFrom Rcpp sourceCpp
-#' @importFrom graphics axis barplot hist par text  legend plot
-#' @importFrom methods is
-#' @importFrom stats approx binomial gaussian coef glm.control glm.fit plogis predict qlogis qnorm quantile rnorm terms var predict glm.control
-#' @importFrom utils data head str
-#' @importFrom stats as.formula glm na.exclude rbinom terms.formula
-NULL
 
 ## -----------------------------------------------------------------------------
 ## Class Membership Tests
@@ -14,6 +5,59 @@ NULL
 is.DataStorageClass <- function(DataStorageClass) "DataStorageClass"%in%class(DataStorageClass)
 is.PredictionModel <- function(PredictionModel) "PredictionModel"%in%class(PredictionModel)
 is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(PredictionStack)
+
+#' Get training data used by the modeling object
+#'
+#' Wrapper function for obtaining the training dataset saved in the modeling object.
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
+#' @return \code{data.table} that was used for model training.
+#' @export
+get_train_data <- function(modelfit) {
+  assert_that(is.PredictionModel(modelfit))
+  return(modelfit$OData_train$dat.sVar)
+}
+#' Get validation data used by the modeling object
+#'
+#' Wrapper function for obtaining the validation dataset saved in the modeling object.
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
+#' @return \code{data.table} that was used for model scoring (CV-MSE).
+#' @export
+get_validation_data <- function(modelfit) {
+  assert_that(is.PredictionModel(modelfit))
+  return(modelfit$OData_valid$dat.sVar)
+}
+
+#' Get the combined out of sample predictions from V cross-validation models
+#'
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit_cvSL}.
+#' @return A vector of out-of-sample predictions from the best selected model (CV-MSE).
+#' @export
+get_out_of_sample_predictions <- function(modelfit) {
+  assert_that(is.PredictionModel(modelfit))
+  return(modelfit$get_out_of_sample_preds)
+}
+
+#' Save the best performing h2o model
+#'
+#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
+#' @export
+save_best_h2o_model <- function(modelfit, file.path = getOption('longGriDiSL.file.path')) {
+  assert_that(is.PredictionModel(modelfit))
+  best_model_name <- modelfit$get_best_model_names(K = 1)
+  message("saving the best model fit: " %+% best_model_name)
+  ## Will obtain the best model object trained on TRAINING data only
+  ## If CV SL was used this model is equivalent to the best model trained on all data
+  ## However, for holdout SL this model will be trained only on non-holdout observations
+  best_model_traindat <- modelfit$get_best_models(K = 1)[[1]]
+  h2o.saveModel(best_model_traindat, file.path, force = TRUE)
+  ## This model is always trained on all data (if exists)
+  best_model_alldat <- modelfit$BestModelFitObject$model.fit$fitted_models_all
+  if (!is.null(best_model_alldat))
+    h2o.saveModel(best_model_alldat[[1]], file.path, force = TRUE)
+
+  return(invisible(NULL))
+}
+
 
 # ---------------------------------------------------------------------------------------
 #' Import data, define nodes (columns), define dummies for factor columns and define input data R6 object

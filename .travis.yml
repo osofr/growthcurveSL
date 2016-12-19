@@ -33,7 +33,6 @@ r_binary_packages:
   - igraph
   - knitr
   - R6
-  - Rcpp
   - RUnit
   - speedglm
   - stringr

@@ -5,7 +5,7 @@
 \title{Predict for holdout or curve SuperLearner fits}
 \usage{
 predict_SL(modelfit, newdata, add_subject_data = FALSE, grid = FALSE,
-  verbose = getOption("growthcurveSL.verbose"))
+  subset_idx = NULL, verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
 \item{modelfit}{Model fit object returned by \code{\link{fit_holdoutSL}} or  \code{\link{fit_cvSL}}.}
@@ -14,6 +14,10 @@ predict_SL(modelfit, newdata, add_subject_data = FALSE, grid = FALSE,
 
 \item{add_subject_data}{Set to \code{TRUE} to add the subject-level data to the resulting predictions (returned as a data.table).
 When \code{FALSE} (default) only the actual predictions are returned (as a matrix with each column representing predictions from a specific model).}
+
+\item{grid}{...}
+
+\item{subset_idx}{...}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.}
 }

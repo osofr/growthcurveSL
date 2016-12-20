@@ -145,10 +145,15 @@ test.holdoutSL.GLM <- function() {
   # ----------------------------------------------------------------
   # Perform fitting with regularlized GLMs using h2o.grid
   # ----------------------------------------------------------------
+  # alpha_opt <- c(0,1,seq(0.1,0.9,0.01))
+  # lambda_opt <- c(seq(0.001, 0.009, by = 0.001), seq(0.01, 0.09, by = 0.01)) # , seq(0.1, 0.9, by = 0.02)
+  # glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 100),
+  #                          alpha = alpha_opt, lambda = lambda_opt)
   alpha_opt <- c(0,1,seq(0.1,0.9,0.01))
   lambda_opt <- c(seq(0.001, 0.009, by = 0.001), seq(0.01, 0.09, by = 0.01)) # , seq(0.1, 0.9, by = 0.02)
-  glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 10),
-                           alpha = alpha_opt, lambda = lambda_opt)
+  glm_hyper_params <- list(search_criteria = list(strategy = "RandomDiscrete", max_models = 500),
+                            alpha = alpha_opt, lambda = lambda_opt,
+                            missing_values_handling = c("MeanImputation"))
 
   GLM.GRIDparams = list(name = "GLM",
                        fit.package = "h2o", fit.algorithm = "GridLearner",

@@ -317,6 +317,8 @@ test.holdoutSL.GLM.GBM <- function() {
                              data = cpp_holdout, params = GRIDparams,
                              hold_column = "hold")
 
+  print("Holdout MSE, using the holdout Y for prediction"); print(mfit_hold$getMSE)
+
   ## Obtain predictions from the best holdout model for all data (re-trained on all observations):
   preds_best_all <- predict_SL(mfit_hold, newdata = cpp_holdout, add_subject_data = TRUE)
   print(preds_best_all[])
@@ -324,6 +326,8 @@ test.holdoutSL.GLM.GBM <- function() {
   ## predict for previously used holdout / validation set:
   preds_holdout_all <- growthcurveSL:::predict_holdout(mfit_hold)
   print(preds_holdout_all[])
+  preds_holdout_best <- get_out_of_sample_predictions(mfit_hold)
+  print(preds_holdout_best[])
 
   ## Predict for best model only (based on prev. holdouts)
   preds_holdout_best <- growthcurveSL:::predict_holdout(mfit_hold, predict_only_bestK_models = 1)
@@ -425,6 +429,9 @@ test.CV.SL <- function() {
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
   covars <- c("apgar1", "apgar5", "parity", "gagebrth", "mage", "meducyrs", "sexn")
 
+  ID <- "subjid"
+  t_name <- "agedays"
+  y <- "haz"
   ## ------------------------------------------------------------------------------------------------
   ## Define learners (glm, grid glm and grid gbm)
   ## ------------------------------------------------------------------------------------------------
@@ -467,7 +474,7 @@ test.CV.SL <- function() {
 
   ## Best (re-trained) model predictions on data used for CV training (default):
   preds_alldat1 <- predict_SL(mfit_cv1, add_subject_data = FALSE)
-  head(preds_alldat1[])
+  print(preds_alldat1[])
 
   ## Best model predictions for new data, must match:
   preds_alldat2 <- predict_SL(mfit_cv1, newdata = cpp_folds, add_subject_data = FALSE)
@@ -499,6 +506,10 @@ test.CV.SL <- function() {
   # Obtain out of sample CV predictions for all training data-points
   cv_preds <- get_out_of_sample_predictions(mfit_cv1)
   cv_preds[]
+
+  cv_valid_preds <- get_validation_data(mfit_cv1)[, c(ID, t_name, y), with = FALSE]
+  cv_valid_preds[, ("holdout.preds") := get_out_of_sample_predictions(mfit_cv1)]
+  cv_valid_preds[]
 
   ## Make report, save grid predictions and out of sample predictions
   # fname <- paste0(data.name, "_", "CV_gridSL_")

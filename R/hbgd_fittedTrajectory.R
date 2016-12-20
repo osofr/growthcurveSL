@@ -39,12 +39,15 @@ create_all_fittedTrajectory <- function(subj_dat, grid_fits_dat, holdout_fits_da
 
     # Divide a dataset into subsets by subject
     by_subject <- function(dat, ID_var, newID = "subjid") {
+        dat <- copy(dat) # dat[, (ID_var) := as.factor(eval(as.name(ID_var)))]
         if (ID_var %in% names(dat)) setnames(dat, ID_var, newID)
         return(res <- datadr::divide(dat, by = newID))
     }
 
     subj_dat_split <- by_subject(subj_dat, ID_var)
+
     grid_fits_dat_split <- by_subject(grid_fits_dat, ID_var)
+
     if (!is.null(holdout_fits_dat)) {
         holdout_fits_dat_split <- by_subject(holdout_fits_dat, ID_var)
     } else {

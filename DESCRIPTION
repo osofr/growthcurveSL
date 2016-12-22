@@ -10,7 +10,6 @@ Imports:
     assertthat,
     data.table,
     ggplot2,
-    ggiraph,
     longGriDiSL,
     methods,
     R6,
@@ -22,6 +21,7 @@ Imports:
     zoo
 Suggests:
     brokenstick,
+    ggiraph,
     h2o,
     face,
     knitr,

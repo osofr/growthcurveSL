@@ -9,7 +9,7 @@ if(FALSE) {
   load_all("./") # load all R files in /R and datasets in /data. Ignores NAMESPACE:
 
   setwd("..");
-  install("growthcurveSL", build_vignettes = FALSE) # INSTALL W/ devtools:
+  install("growthcurveSL", build_vignettes = FALSE, dependencies = FALSE) # INSTALL W/ devtools:
   library("growthcurveSL")
   # system("echo $PATH") # see the current path env var
   # system("R CMD Rd2pdf growthcurveSL")  # just create the pdf manual from help files

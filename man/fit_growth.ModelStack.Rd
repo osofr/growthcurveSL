@@ -3,7 +3,7 @@
 \name{fit_growth}
 \alias{fit_growth}
 \alias{fit_growth.ModelStack}
-\title{Fit Discrete Growth Curve SuperLearner (Ensemble)}
+\title{Fit Discrete Growth Curve SuperLearner}
 \usage{
 fit_growth(...)
 
@@ -14,27 +14,36 @@ fit_growth(...)
   verbose = getOption("GriDiSL.verbose"), ...)
 }
 \arguments{
-\item{...}{Additional arguments that will be passed on to \code{fit_model} function.}
+\item{...}{Additional arguments that will be passed on to \code{GriDiSL::fit_model} function.}
 
-\item{models}{...}
+\item{models}{Parameters specifying the model(s) to fit.
+This must be a result of calling \code{GriDiSL::defModel(...) + GriDiSL::defModel(...)} functions.
+See \code{\link{defModel}} for additional information.}
 
-\item{method}{The type of model selection procedure when fitting several models at once. Possible options are "none", "cv", and "holdout".}
+\item{method}{The type of model selection procedure when fitting several models.
+Possible options are "none" (no model selection),
+"cv" (model selection with V-fold cross-validation), and
+"holdout" (model selection based on validation holdout sample).}
 
 \item{data}{Input dataset, can be a \code{data.frame} or a \code{data.table}.}
 
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
 
-\item{t_name}{A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).}
+\item{t_name}{A character string name of the column with integer-valued measurement time-points
+(in days, weeks, months, etc).}
 
-\item{x}{A vector containing the names of predictor variables to use for modeling. If x is missing, then all columns except \code{ID}, \code{y} are used.}
+\item{x}{A vector containing the names of predictor variables to use for modeling.
+If x is missing, then all columns except \code{ID}, \code{y} are used.}
 
 \item{y}{A character string name of the column that represent the response variable in the model.}
 
 \item{nfolds}{Number of folds to use in cross-validation.}
 
-\item{fold_column}{The name of the column in the input data that contains the cross-validation fold indicators (must be an ordered factor).}
+\item{fold_column}{The name of the column in the input data that contains the cross-validation
+fold indicators (must be an ordered factor).}
 
-\item{hold_column}{The name of the column that contains the holdout observation indicators (TRUE/FALSE) in the input data.
+\item{hold_column}{The name of the column that contains the holdout observation indicators
+(TRUE/FALSE) in the input data.
 This holdout column must be defined and added to the input data prior to calling this function.}
 
 \item{hold_random}{Logical, specifying if the holdout observations should be selected at random.
@@ -42,22 +51,25 @@ If FALSE then the last observation for each subject is selected as a holdout.}
 
 \item{seed}{Random number seed for selecting a random holdout.}
 
-\item{use_new_features}{...}
+\item{use_new_features}{Set to \code{TRUE} to use new features (predictors) defined by the growth curve
+feature-creator function \code{\link{define_features_drop}}.
+Note that the \code{define_features_drop} function is called automatically, but the features
+defined inside this function aren't use unless this is set to \code{TRUE}.}
 
 \item{refit}{Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 When \code{FALSE}, it might be impossible to make predictions from this model fit.}
 
-\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
-
-\item{params}{Parameters specifying the type of modeling procedure to be used.}
+\item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
+Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
 }
 \value{
-...
+An R6 object containing the model fit(s).
 }
 \description{
 Define and fit discrete SuperLearner for growth curve modeling.
-Model selection (scoring) is based on MSE for a single random (or last) holdout data-point for each subject.
-This is in contrast to the model selection with V-fold cross-validated MSE in \code{\link{fit_cvSL}},
-which leaves the entire subjects (entire growth curves) outside of the training sample.
+Model selection (scoring) can be based on either MSE for a single random (or last)
+holdout data-point for each subject (method = "holdout") or
+V-fold cross-validated MSE which uses entire subjects
+(entire growth curves) for model validation (method = "cv").
 }
 

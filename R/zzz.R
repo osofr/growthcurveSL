@@ -4,6 +4,7 @@
 #-----------------------------------------------------------------------------
 gvars <- new.env(parent = emptyenv())
 gvars$verbose <- FALSE      # verbose mode (print all messages)
+gvars$method <- "none"      # Model selection method used ("cv", "holdout", "none")
 gvars$opts <- list()        # named list of package options that is controllable by the user (set_all_growthcurveSL_options())
 gvars$misval <- NA_integer_ # the default missing value for observations (# gvars$misval <- -.Machine$integer.max)
 gvars$misXreplace <- 0L     # the default replacement value for misval that appear in the design matrix

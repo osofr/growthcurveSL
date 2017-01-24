@@ -10,7 +10,7 @@ Imports:
     assertthat,
     data.table,
     ggplot2,
-    longGriDiSL,
+    GriDiSL,
     methods,
     R6,
     rmarkdown,

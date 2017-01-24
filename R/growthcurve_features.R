@@ -21,7 +21,15 @@
 #' Finally, if the argument 'hold_column' is not NULL, the output dataset will contain the indicator column of holdout observations
 #' (named according to hold_column argument).
 #' @export
-predict_save_tgrid <- function(SLfit, data, ID, t_name, y, tmin = 1, tmax = 500, incr = 2, hold_column = NULL,
+predict_save_tgrid <- function(SLfit,
+                               data,
+                               ID,
+                               t_name,
+                               y,
+                               tmin = 1,
+                               tmax = 500,
+                               incr = 2,
+                               hold_column = NULL,
                                file.name = NULL,
                                file.path = getOption('growthcurveSL.file.path')) {
 

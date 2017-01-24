@@ -5,6 +5,7 @@
 is.DataStorageClass <- function(DataStorageClass) "DataStorageClass"%in%class(DataStorageClass)
 is.PredictionModel <- function(PredictionModel) "PredictionModel"%in%class(PredictionModel)
 is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(PredictionStack)
+is.ModelStack <- function(obj) "ModelStack" %in% class(obj)
 
 #' Get training data used by the modeling object
 #'
@@ -37,125 +38,20 @@ get_out_of_sample_predictions <- function(modelfit) {
   return(modelfit$get_out_of_sample_preds)
 }
 
-#' Save the best performing h2o model
-#'
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
-#' @export
-save_best_h2o_model <- function(modelfit, file.path = getOption('longGriDiSL.file.path')) {
-  assert_that(is.PredictionModel(modelfit))
-  best_model_name <- modelfit$get_best_model_names(K = 1)
-  message("saving the best model fit: " %+% best_model_name)
-  ## Will obtain the best model object trained on TRAINING data only
-  ## If CV SL was used this model is equivalent to the best model trained on all data
-  ## However, for holdout SL this model will be trained only on non-holdout observations
-  best_model_traindat <- modelfit$get_best_models(K = 1)[[1]]
-  h2o.saveModel(best_model_traindat, file.path, force = TRUE)
-  ## This model is always trained on all data (if exists)
-  best_model_alldat <- modelfit$BestModelFitObject$model.fit$fitted_models_all
-  if (!is.null(best_model_alldat))
-    h2o.saveModel(best_model_alldat[[1]], file.path, force = TRUE)
-
-  return(invisible(NULL))
-}
-
 # ---------------------------------------------------------------------------------------
-#' Define and fit growth models evaluated on holdout observations.
-#'
-#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
-#' @param ID A character string name of the column that contains the unique subject identifiers.
-#' @param nfolds Number of unique folds (same fold is always assigned to all observations that share the same ID).
-#' @param fold_column A name of the column that will contain the fold indicators
-#' @param seed Random number seed for selecting a random fold.
-#' @return An input data with added fold indicator column (as ordered factor with levels 1:nfolds).
-#' @export
-add_CVfolds_ind = function(data, ID, nfolds = 5, fold_column = "fold", seed = NULL) {
-  nuniqueIDs = function() { length(unique(data[[ID]])) }
-  data <- data.table::data.table(data)
-  data.table::setkeyv(data, cols = ID)
-  if (fold_column %in% names(data)) data[, (fold_column) := NULL]
-  nuniqueIDs <- nuniqueIDs()
-  if (!is.null(seed)) set.seed(as.numeric(seed))  #If seed is specified, set seed prior to next step
-  x <- sample(rep(seq(nfolds), ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs]
-
-  # format fold IDs as characters with leading 0. That way the ordering of the factor levels remains consistent betweeen R and h2oFRAME
-  fold_IDs <- sprintf("%02d", seq(nfolds))
-  fold_id <- as.factor(sample(rep(fold_IDs, ceiling(nuniqueIDs/nfolds)))[1:nuniqueIDs])  # Cross-validation folds
-
-
-  foldsDT <- data.table::data.table("ID" = unique(data[[ID]]), fold_column = fold_id)
-  data.table::setnames(foldsDT, old = names(foldsDT), new = c(ID, fold_column))
-  data.table::setkeyv(foldsDT, cols = ID)
-  data <- merge(data, foldsDT, by = ID, all.x = TRUE)
-  return(data)
-}
-
-# ---------------------------------------------------------------------------------------
-#' Define and fit growth models evaluated on holdout observations.
-#'
-#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
-#' @param ID A character string name of the column that contains the unique subject identifiers.
-#' @param hold_column A name of the column that will contain the the holdout indicators
-#' @param random Logical, specifying if the holdout observations should be selected at random.
-#' If FALSE then the last observation for each subject is selected as a holdout.
-#' @param seed Random number seed for selecting a random holdout.
-#' @return An input data with added holdout indicator column (TRUE for holdout observation indicator, FALSE for training observation indicator).
-#' @export
-add_holdout_ind = function(data, ID, hold_column = "hold", random = TRUE, seed = NULL) {
-  data <- data.table::data.table(data)
-  data.table::setkeyv(data, cols = ID)
-  if (!is.null(seed)) set.seed(as.numeric(seed))
-  if (hold_column %in% names(data)) data[, (hold_column) := NULL]
-
-  samplemax2 <- function(x) {
-    if (x == 1L) {
-      return(FALSE)
-    } else {
-      res <- rep.int(FALSE, x)
-      res[ length(res) ] <- TRUE
-      return(res)
-    }
-  }
-
-  samplerandom2 <- function(x) {
-    if (x == 1L) {
-      return(FALSE)
-    } else {
-      res <- rep.int(FALSE, x)
-      res[ sample((1:x), 1) ] <- TRUE
-      return(res)
-    }
-  }
-
-  if (random) {
-    data[, (hold_column) := samplerandom2(.N), by = eval(ID)]
-  } else {
-    data[, (hold_column) := samplemax2(.N), by = eval(ID)]
-  }
-  # self$hold_column <- hold_column
-
-  return(data)
-}
-
-# ---------------------------------------------------------------------------------------
-#' Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
-#'
-#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
-#' @param ID A character string name of the column that contains the unique subject identifiers.
-#' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
-#' @param covars Names of predictors (covariates) in the data.
-#' @param OUTCOME Character name of the column containing outcomes.
-#' @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-#' @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
+# Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
+#
+# @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+# @param ID A character string name of the column that contains the unique subject identifiers.
+# @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
+# @param covars Names of predictors (covariates) in the data.
+# @param OUTCOME Character name of the column containing outcomes.
+# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+# @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
 # @example tests/examples/1_growthcurveSL_example.R
-#' @export
+# @export
 importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("growthcurveSL.verbose")) {
   gvars$verbose <- verbose
-  # if (verbose) {
-  #   current.options <- capture.output(str(gvars$opts))
-  #   print("Using the following growthcurveSL options/settings: ")
-  #   cat('\n')
-  #   cat(paste0(current.options, collapse = '\n'), '\n')
-  # }
 
   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
     covars <- setdiff(colnames(data), c(ID, OUTCOME))
@@ -164,43 +60,6 @@ importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, 
   nodes <- list(Lnodes = covars, Ynode = OUTCOME, IDnode = ID, tnode = t_name)
   OData <- DataStorageClass$new(Odata = data, nodes = nodes)
 
-  ## --------------------------------------------------------------------------------------------------------
-  ## Convert all character covars into factors?
-  ## --------------------------------------------------------------------------------------------------------
-  # ....?
-
-  ## --------------------------------------------------------------------------------------------------------
-  ## Create dummies for each factor
-  ## --------------------------------------------------------------------------------------------------------
-  # factor.Ls <- unlist(lapply(OData$dat.sVar, is.factor))
-  # factor.Ls <- factor.Ls[covars]
-  # factor.Ls <- names(factor.Ls)[factor.Ls]
-
-  # new.factor.names <- vector(mode="list", length=length(factor.Ls))
-  # names(new.factor.names) <- factor.Ls
-  # if (length(factor.Ls)>0 && verbose)
-  #   message("...converting the following factor(s) to binary dummies (and droping the first factor levels): " %+% paste0(factor.Ls, collapse=","))
-  # for (factor.varnm in factor.Ls) {
-  #   factor.levs <- levels(OData$dat.sVar[,factor.varnm, with=FALSE][[1]])
-  #   factor.levs <- factor.levs[-1] # remove the first level (reference class)
-  #   # use levels to define cat indicators:
-  #   OData$dat.sVar[,(factor.varnm %+% "_" %+% factor.levs) := lapply(factor.levs, function(x) levels(get(factor.varnm))[get(factor.varnm)] %in% x)]
-  #   # to remove the origional factor var: # OData$dat.sVar[,(factor.varnm):=NULL]
-  #   new.factor.names[[factor.varnm]] <- factor.varnm %+% "_" %+% factor.levs
-  # }
-  # OData$new.factor.names <- new.factor.names
-
-  ## --------------------------------------------------------------------------------------------------------
-  ## Convert all logical vars to binary integers
-  ## --------------------------------------------------------------------------------------------------------
-  # logical.Ls <- unlist(lapply(OData$dat.sVar, is.logical))
-  # logical.Ls <- names(logical.Ls)[logical.Ls]
-  # if (length(logical.Ls)>0 && verbose) message("...converting logical columns to binary integers (0 = FALSE)...")
-  # for (logical.varnm in logical.Ls) {
-  #   OData$dat.sVar[,(logical.varnm) := as.integer(get(logical.varnm))]
-  # }
-
-  # for (Ynode in nodes$Ynode)  CheckVarNameExists(OData$dat.sVar, Ynode)
   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
   return(OData)
 }
@@ -269,61 +128,61 @@ CheckVarNameExists <- function(data, varname) {
   return(invisible(NULL))
 }
 
-# ---------------------------------------------------------------------------------------
-#' Plot the top K smallest MSEs for a given model ensemble object.
-#'
-#' @param PredictionModel Must be an R6 object of class \code{PredictionModel} (returned by \code{get_fit} function)
-#' or an object of class \code{PredictionStack} (returned by \code{make_PredictionStack} function).
-#' Must also contain validation /test set predictions and corresponding MSEs.
-#' @param K How many top (smallest) MSEs should be plotted? Default is 5.
-#' @export
-plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
-  # require("ggplot2")
-  require("ggiraph")
-  assert_that(is.PredictionModel(PredictionModel) || is.PredictionStack(PredictionModel))
-  assert_that(is.integerish(K))
+# # ---------------------------------------------------------------------------------------
+# # Plot the top K smallest MSEs for a given model ensemble object.
+# #
+# # @param PredictionModel Must be an R6 object of class \code{PredictionModel} (returned by \code{get_fit} function)
+# # or an object of class \code{PredictionStack} (returned by \code{make_PredictionStack} function).
+# # Must also contain validation /test set predictions and corresponding MSEs.
+# # @param K How many top (smallest) MSEs should be plotted? Default is 5.
+# # @export
+# plotMSEs <- function(PredictionModel, K = 1, interactive = FALSE) {
+#   # require("ggplot2")
+#   require("ggiraph")
+#   assert_that(is.PredictionModel(PredictionModel) || is.PredictionStack(PredictionModel))
+#   assert_that(is.integerish(K))
 
-  datMSE <- PredictionModel$get_best_MSE_table(K = K)
-  # datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV)]) # order when not flipping coords
-  datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV, decreasing = TRUE)]) # order when flipping coords
+#   datMSE <- PredictionModel$get_best_MSE_table(K = K)
+#   # datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV)]) # order when not flipping coords
+#   datMSE$model <- factor(datMSE$model, levels = datMSE$model[order(datMSE$MSE.CV, decreasing = TRUE)]) # order when flipping coords
 
-  # datMSE$tooltip <- "MSE.CV = " %+% round(datMSE$MSE.CV, 2) %+% "; 95% CI: [" %+% round(datMSE$CIlow,2) %+% "-" %+% round(datMSE$CIhi,2)  %+%"]"
-  # datMSE$tooltip <- "MSE.CV = " %+% format(datMSE$MSE.CV, digits = 3, nsmall=2) %+% "; 95% CI: [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
-  datMSE$tooltip <- "MSE.CV = " %+% format(datMSE$MSE.CV, digits = 3, nsmall=2) %+% " [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
+#   # datMSE$tooltip <- "MSE.CV = " %+% round(datMSE$MSE.CV, 2) %+% "; 95% CI: [" %+% round(datMSE$CIlow,2) %+% "-" %+% round(datMSE$CIhi,2)  %+%"]"
+#   # datMSE$tooltip <- "MSE.CV = " %+% format(datMSE$MSE.CV, digits = 3, nsmall=2) %+% "; 95% CI: [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
+#   datMSE$tooltip <- "MSE.CV = " %+% format(datMSE$MSE.CV, digits = 3, nsmall=2) %+% " [" %+% format(datMSE$CIlow, digits = 3, nsmall=2) %+% "-" %+% format(datMSE$CIhi, digits = 3, nsmall=2)  %+% "]"
 
-  datMSE$onclick <- "window.location.hash = \"#jump" %+% 1:nrow(datMSE) %+% "\""
-  # open a new browser window:
-  # datMSE$onclick <- sprintf("window.open(\"%s%s\")", "http://en.wikipedia.org/wiki/", "Florida")  # pop-up box:
-  # datMSE$onclick = paste0("alert(\"",datMSE$model.id, "\")")
+#   datMSE$onclick <- "window.location.hash = \"#jump" %+% 1:nrow(datMSE) %+% "\""
+#   # open a new browser window:
+#   # datMSE$onclick <- sprintf("window.open(\"%s%s\")", "http://en.wikipedia.org/wiki/", "Florida")  # pop-up box:
+#   # datMSE$onclick = paste0("alert(\"",datMSE$model.id, "\")")
 
-  p <- ggplot(datMSE, aes(x = model, y = MSE.CV, ymin=CIlow, ymax=CIhi)) # will use model name (algorithm)
-  if (interactive) {
-    p <- p + geom_point_interactive(aes(color = algorithm, tooltip = tooltip, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
-    # p <- p + geom_point_interactive(aes(color = algorithm, tooltip = model.id, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
-  } else {
-    p <- p + geom_point(aes(color = algorithm), size = 2, position = position_dodge(0.01)) # alpha = 0.8
-  }
-  p <- p + geom_errorbar(aes(color = algorithm), width = 0.2, position = position_dodge(0.01))
-  p <- p + theme_bw() + coord_flip()
+#   p <- ggplot(datMSE, aes(x = model, y = MSE.CV, ymin=CIlow, ymax=CIhi)) # will use model name (algorithm)
+#   if (interactive) {
+#     p <- p + geom_point_interactive(aes(color = algorithm, tooltip = tooltip, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
+#     # p <- p + geom_point_interactive(aes(color = algorithm, tooltip = model.id, data_id = model.id, onclick = onclick), size = 2, position = position_dodge(0.01)) # alpha = 0.8
+#   } else {
+#     p <- p + geom_point(aes(color = algorithm), size = 2, position = position_dodge(0.01)) # alpha = 0.8
+#   }
+#   p <- p + geom_errorbar(aes(color = algorithm), width = 0.2, position = position_dodge(0.01))
+#   p <- p + theme_bw() + coord_flip()
 
-  if (interactive){
-    ggiraph(code = print(p), width = .6,
-            tooltip_extra_css = "padding:2px;background:rgba(70,70,70,0.1);color:black;border-radius:2px 2px 2px 2px;",
-            hover_css = "fill:#1279BF;stroke:#1279BF;cursor:pointer;"
-            )
-    # to active zoom on a plot:
-    # zoom_max = 2
-  } else {
-    print(p)
-  }
-  # return(invisible(NULL))
-  # ggiraph(code = {print(p)})
-  # , tooltip_offx = 20, tooltip_offy = -10
-  # p <- p + facet_grid(N ~ ., labeller = label_both) + xlab('Scenario')
-  # # p <- p + facet_grid(. ~ N, labeller = label_both) + xlab('Scenario')
-  # p <- p + ylab('Mean estimate \\& 95\\% CI length')
-  # p <- p + theme(axis.title.y = element_blank(),
-  #                axis.title.x = element_text(size = 8),
-  #                plot.margin = unit(c(1, 0, 1, 1), "lines"),
-  #                legend.position="top")
-}
+#   if (interactive){
+#     ggiraph(code = print(p), width = .6,
+#             tooltip_extra_css = "padding:2px;background:rgba(70,70,70,0.1);color:black;border-radius:2px 2px 2px 2px;",
+#             hover_css = "fill:#1279BF;stroke:#1279BF;cursor:pointer;"
+#             )
+#     # to active zoom on a plot:
+#     # zoom_max = 2
+#   } else {
+#     print(p)
+#   }
+#   # return(invisible(NULL))
+#   # ggiraph(code = {print(p)})
+#   # , tooltip_offx = 20, tooltip_offy = -10
+#   # p <- p + facet_grid(N ~ ., labeller = label_both) + xlab('Scenario')
+#   # # p <- p + facet_grid(. ~ N, labeller = label_both) + xlab('Scenario')
+#   # p <- p + ylab('Mean estimate \\& 95\\% CI length')
+#   # p <- p + theme(axis.title.y = element_blank(),
+#   #                axis.title.x = element_text(size = 8),
+#   #                plot.margin = unit(c(1, 0, 1, 1), "lines"),
+#   #                legend.position="top")
+# }

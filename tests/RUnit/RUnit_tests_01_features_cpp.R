@@ -2,7 +2,7 @@
 ## Features of the curve for training / validation sets (including random holdout and CV validation)
 ## ------------------------------------------------------------------------------------
 test.holdout.features <- function() {
-  require("longGriDiSL")
+  require("GriDiSL")
   options(growthcurveSL.verbose = TRUE)
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]

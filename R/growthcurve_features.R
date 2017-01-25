@@ -3,18 +3,17 @@
 #' @param all_preds A data.frame nested by subject and containing fits from \code{\link{predict_all}}
 #' @param ggplot Set to \code{TRUE} to use ggplot for plotting. Otherwise the default is to use \code{rbokeh}
 #' @export
-add_trajectory_plot <- function(all_preds, ggplot = FALSE) {
+add_fit_plots <- function(all_preds, ggplot = FALSE) {
   suppressWarnings(suppressMessages({
     fits_all_plot <- all_preds %>%
       plyr::mutate(panel = trelliscopejs::map_plot(fit,
         ~ rbokeh::figure(xlab = "age", ylab = "growth") %>%
-          rbokeh::ly_points(x, y, data = .x[["xy"]], color = "black") %>%
-          rbokeh::ly_points(x, y, data = .x[["fit"]], color = "black", glyph = 19, size = 4) %>%
-          rbokeh::ly_lines(x, y, data = .x[["fitgrid"]], color = "grey") %>%
-          rbokeh::ly_points(x, y, data = .x[["holdout"]], color = "red")
+          rbokeh::ly_points(x, y, data = .x[["fit"]], color = "black") %>%
+          rbokeh::ly_points(x, preds, data = .x[["fit"]], color = "black", glyph = 19, size = 4) %>%
+          rbokeh::ly_lines(x, preds, data = .x[["fitgrid"]], color = "grey") %>%
+          rbokeh::ly_points(x, preds, data = .x[["holdout"]], color = "red")
       ))
   }))
-
   return(fits_all_plot)
 }
 

@@ -77,9 +77,6 @@ predict_growth <- function(modelfit,
   return(preds)
 }
 
-
-
-
 # ---------------------------------------------------------------------------------------
 #' Obtain all possible predictions with one call
 #'
@@ -131,24 +128,28 @@ predict_all <- function(modelfit,
   unique_subj <- newdata %>%
                  dplyr::distinct_(ID)
 
-  ## Generate data with one row per subj ID
-  ## Each row in column "xy" is itself a data.frame
-  ## Each "xy" is a data.frame containing all observed (x, y) = (time, outcome) values on one subject
-  obs_bysujb <- newdata %>%
-                dplyr::rename_("x" = t_name, "y" = y) %>%
-                dplyr::select_(ID, "x", "y") %>%
-                dplyr::group_by_(ID) %>%
-                tidyr::nest(.key = "xy")
-
-
   ## Predictions for new data based on best SL model trained on all data:
   preds_alldat <- predict_growth(modelfit, newdata = newdata, add_subject_data = TRUE)
 
-  fit_bysujb <- preds_alldat %>%
-                dplyr::rename_("x" = t_name, "y" = "preds") %>%
+  ## Create a dataset with (ID, time, outcome, prediction) column
+  fit_bysujb <- newdata %>%
+                dplyr::rename_("x" = t_name, "y" = y) %>%
+                dplyr::select_(ID, "x", "y") %>%
                 dplyr::group_by_(ID) %>%
-                tidyr::nest(.key = "fit")
+                dplyr::left_join({
+                  preds_alldat %>%
+                  dplyr::rename_("x" = t_name) %>%
+                  dplyr::group_by_(ID)
+                })
 
+  # fit_bysujb <- preds_alldat %>%
+  #               dplyr::rename_("x" = t_name) %>%
+  #               dplyr::group_by_(ID)
+  # obs_bysujb <- newdata %>%
+  #               dplyr::rename_("x" = t_name, "y" = y) %>%
+  #               dplyr::select_(ID, "x", "y") %>%
+  #               dplyr::group_by_(ID) %>%
+  #               dplyr::left_join(fit_bysujb)
 
   ## Predictions for all holdout data points for all models trained on non-holdout data:
   if (add_holdout)
@@ -156,10 +157,8 @@ predict_all <- function(modelfit,
 
   hold_bysujb <-  unique_subj %>%
                   dplyr::left_join(preds_holdout) %>%
-                  dplyr::rename_("x" = t_name, "y" = "preds") %>%
-                  dplyr::group_by_(ID) %>%
-                  tidyr::nest(.key = "holdout")
-
+                  dplyr::rename_("x" = t_name) %>%
+                  dplyr::group_by_(ID)
 
   ## Predictions for a grid of equally spaced time points
   if (add_grid) {
@@ -170,16 +169,26 @@ predict_all <- function(modelfit,
 
   fitgrid_bysujb <- unique_subj %>%
                     dplyr::left_join(preds_grid) %>%
-                    dplyr::rename_("x" = t_name, "y" = "preds") %>%
-                    dplyr::group_by_(ID) %>%
-                    tidyr::nest(.key = "fitgrid")
+                    dplyr::rename_("x" = t_name) %>%
+                    dplyr::group_by_(ID)
 
+  ## Generate data with one row per subj ID
+  ## nest each prediction dataset type in its respective list-column
 
-  ## combine all 3 datasets:
-  fits_all <- observed_bysujb %>%
-              dplyr::left_join(fit_bysujb) %>%
-              dplyr::left_join(fitgrid_bysujb) %>%
-              dplyr::left_join(hold_bysujb)
+  # obs_bysujb <- obs_bysujb %>% nest(.key = "xy")
+  fit_bysujb <- fit_bysujb %>% tidyr::nest(.key = "fit")
+  hold_bysujb <- hold_bysujb %>% tidyr::nest(.key = "holdout")
+  fitgrid_bysujb <- fitgrid_bysujb %>% tidyr::nest(.key = "fitgrid")
+
+  ## combine all 3 datasets by subject:
+  # fits_all <- obs_bysujb %>%
+  #             dplyr::left_join(fit_bysujb) %>%
+  #             dplyr::left_join(hold_bysujb) %>%
+  #             dplyr::left_join(fitgrid_bysujb)
+
+  fits_all <- fit_bysujb %>%
+              dplyr::left_join(hold_bysujb) %>%
+              dplyr::left_join(fitgrid_bysujb)
 
   fits_all <- fits_all %>%
               dplyr::group_by_(ID) %>%

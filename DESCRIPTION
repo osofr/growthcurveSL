@@ -16,6 +16,7 @@ Imports:
     R6,
     rmarkdown,
     pander,
+    progress,
     purrr,
     speedglm,
     stats,

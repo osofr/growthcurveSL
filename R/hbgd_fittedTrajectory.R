@@ -1,3 +1,19 @@
+by_subject <- function(dat) {
+  if (!has_data_attributes(dat))
+    dat <- get_data_attributes(dat)
+
+  # find subject-level variables so we don't nest them
+  var_summ <- attr(dat, "hbgd")$var_summ
+  subj_vars <- c("subject-level", "subject id")
+  ind <- which(var_summ$type %in% subj_vars)
+
+  group_args <- c(list(.data = dat), as.list(var_summ$variable[ind]))
+  do.call(dplyr::group_by_, group_args) %>%
+    tidyr::nest(.key = "longi")
+}
+
+
+
 #' Create a fittedTrajectory object with fits for a single subject
 #'
 #' Creates objects of class \code{fittedTrajectory} with growth curve predictions, one object for subject ID in the data.
@@ -27,8 +43,8 @@
 #' @export
 create_all_fittedTrajectory <- function(subj_dat, grid_fits_dat, holdout_fits_dat = NULL, ID_var, t_var, y_var, sex_var, method,
                                         xy_pair_name = c("agedays","htcm"),
-                                        grid_fits_var = "SL.preds",
-                                        holdout_fits_var = "holdout.preds",
+                                        grid_fits_var = "preds",
+                                        holdout_fits_var = "preds",
                                         checkpoints = c(50, 100),
                                         fun_y_to_raw = hbgd::who_zscore2htcm,
                                         fun_y_to_z = function(x, y, ...) return(y)) {
@@ -96,8 +112,8 @@ create_all_fittedTrajectory <- function(subj_dat, grid_fits_dat, holdout_fits_da
 create_fittedTrajectory_1subj <- function(subj_dat_1subj, grid_fits_dat_1subj, holdout_fits_dat_1subj = NULL,
                                           t_var, y_var, sex_var, method,
                                           xy_pair_name = c("agedays","htcm"),
-                                          grid_fits_var = "SL.preds",
-                                          holdout_fits_var = "holdout_fit",
+                                          grid_fits_var = "preds",
+                                          holdout_fits_var = "preds",
                                           checkpoints = c(50, 100),
                                           fun_y_to_raw = hbgd::who_zscore2htcm,
                                           fun_y_to_z = function(x, y, ...) return(y)) {

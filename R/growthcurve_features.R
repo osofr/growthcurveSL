@@ -35,7 +35,7 @@ predict_save_tgrid <- function(SLfit,
 
   inputDT_all_train <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
   inputDT_tgrid <- define_tgrid(inputDT_all_train, ID = ID, t_name = t_name, y = y, tmin = tmin, tmax = tmax, incr = incr, hold_column = hold_column)
-  preds_tgrid <- predict_SL(SLfit, newdata = inputDT_tgrid, grid = TRUE, add_subject_data = TRUE)
+  preds_tgrid <- predict_growth(SLfit, newdata = inputDT_tgrid, grid = TRUE, add_subject_data = TRUE)
 
   preds_tgrid[, ("train_point") := inputDT_tgrid[["train_point"]]]
   if (!is.null(hold_column))
@@ -46,7 +46,7 @@ predict_save_tgrid <- function(SLfit,
   if (!is.null(file.name)) {
     full_path <- file.path(file.path, paste0(file.name, ".csv"))
     message(paste0("...writing csv file with predictions to: ", full_path))
-    data.table::fwrite(preds_tgrid[, c(ID, t_name, "train_point", hold_column, "SL.preds"), with = FALSE],
+    data.table::fwrite(preds_tgrid[, c(ID, t_name, "train_point", hold_column, "preds"), with = FALSE],
                        file = full_path)
   }
 

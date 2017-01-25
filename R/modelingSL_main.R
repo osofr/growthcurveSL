@@ -259,7 +259,7 @@ predict_growth <- function(modelfit,
 
   # if (best_only) {
   #   best_fit_name <- names(modelfit$getRetrainedfit$model_ids)
-  #   data.table::setnames(preds, old = best_fit_name, new = "SL.preds")
+  #   data.table::setnames(preds, old = best_fit_name, new = "preds")
   # }
 
   ## will obtain predictions for all models in the ensemble that were trained on non-holdout observations only:

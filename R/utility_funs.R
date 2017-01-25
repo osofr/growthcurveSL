@@ -7,36 +7,36 @@ is.PredictionModel <- function(PredictionModel) "PredictionModel"%in%class(Predi
 is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(PredictionStack)
 is.ModelStack <- function(obj) "ModelStack" %in% class(obj)
 
-#' Get training data used by the modeling object
-#'
-#' Wrapper function for obtaining the training dataset saved in the modeling object.
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
-#' @return \code{data.table} that was used for model training.
-#' @export
-get_train_data <- function(modelfit) {
-  assert_that(is.PredictionModel(modelfit))
-  return(modelfit$OData_train$dat.sVar)
-}
-#' Get validation data used by the modeling object
-#'
-#' Wrapper function for obtaining the validation dataset saved in the modeling object.
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
-#' @return \code{data.table} that was used for model scoring (CV-MSE).
-#' @export
-get_validation_data <- function(modelfit) {
-  assert_that(is.PredictionModel(modelfit))
-  return(modelfit$OData_valid$dat.sVar)
-}
+# #' Get training data used by the modeling object
+# #'
+# #' Wrapper function for obtaining the training dataset saved in the modeling object.
+# #' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
+# #' @return \code{data.table} that was used for model training.
+# #' @export
+# get_train_data <- function(modelfit) {
+#   assert_that(is.PredictionModel(modelfit))
+#   return(modelfit$OData_train$dat.sVar)
+# }
+# #' Get validation data used by the modeling object
+# #'
+# #' Wrapper function for obtaining the validation dataset saved in the modeling object.
+# #' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model}, \code{fit_holdoutSL} or \code{fit_cvSL}.
+# #' @return \code{data.table} that was used for model scoring (CV-MSE).
+# #' @export
+# get_validation_data <- function(modelfit) {
+#   assert_that(is.PredictionModel(modelfit))
+#   return(modelfit$OData_valid$dat.sVar)
+# }
 
-#' Get the combined out of sample predictions from V cross-validation models
-#'
-#' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit_cvSL}.
-#' @return A vector of out-of-sample predictions from the best selected model (CV-MSE).
-#' @export
-get_out_of_sample_predictions <- function(modelfit) {
-  assert_that(is.PredictionModel(modelfit))
-  return(modelfit$get_out_of_sample_preds)
-}
+# #' Get the combined out of sample predictions from V cross-validation models
+# #'
+# #' @param modelfit A model object of class \code{PredictionModel} returned by functions \code{fit_model} or \code{fit_cvSL}.
+# #' @return A vector of out-of-sample predictions from the best selected model (CV-MSE).
+# #' @export
+# get_out_of_sample_predictions <- function(modelfit) {
+#   assert_that(is.PredictionModel(modelfit))
+#   return(modelfit$get_out_of_sample_preds)
+# }
 
 # ---------------------------------------------------------------------------------------
 # Import data, define nodes (columns), define dummies for factor columns and define input data R6 object

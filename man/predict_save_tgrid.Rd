@@ -5,7 +5,7 @@
 \title{Predict and save the entire growth curve (grid of time points).}
 \usage{
 predict_save_tgrid(SLfit, data, ID, t_name, y, tmin = 1, tmax = 500,
-  incr = 2, hold_column = NULL, file.name = NULL,
+  incr = 2, file.name = NULL,
   file.path = getOption("growthcurveSL.file.path"))
 }
 \arguments{
@@ -24,8 +24,6 @@ predict_save_tgrid(SLfit, data, ID, t_name, y, tmin = 1, tmax = 500,
 \item{tmax}{Max t value of the grid}
 
 \item{incr}{Increment value for the grid of \code{t}'s}
-
-\item{hold_column}{Column name in \code{dataDT} indicating the holdout observations (if used). Leave as \code{NULL} if no \code{hold_column} is present.}
 
 \item{file.name}{A file name (without the .csv extension) in which the prediction dataset will be saved. Leave as NULL is no saving is necessary.}
 

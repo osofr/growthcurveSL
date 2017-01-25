@@ -1,19 +1,3 @@
-by_subject <- function(dat) {
-  if (!has_data_attributes(dat))
-    dat <- get_data_attributes(dat)
-
-  # find subject-level variables so we don't nest them
-  var_summ <- attr(dat, "hbgd")$var_summ
-  subj_vars <- c("subject-level", "subject id")
-  ind <- which(var_summ$type %in% subj_vars)
-
-  group_args <- c(list(.data = dat), as.list(var_summ$variable[ind]))
-  do.call(dplyr::group_by_, group_args) %>%
-    tidyr::nest(.key = "longi")
-}
-
-
-
 #' Create a fittedTrajectory object with fits for a single subject
 #'
 #' Creates objects of class \code{fittedTrajectory} with growth curve predictions, one object for subject ID in the data.

@@ -277,14 +277,15 @@ test.holdoutSL.GLM.GBM <- function() {
  #                   glm = glm_hyper_models, gbm = gbm_hyper_models,
  #                   learner = "h2o.glm.reg03",
  #                   stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
-
- GRIDparams <-
   #  h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) GriDiSL::h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
-              GriDiSL::defModel(estimator = "h2o__glm", family = "gaussian",
-                         alpha = 0.3,
-                         nlambdas = 50,
-                         lambda_search = TRUE,
-                         seed = 23) +
+  ## add holdout indicator column
+  cpp_holdout <- GriDiSL::add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
+
+  GRIDparams <- GriDiSL::defModel(estimator = "h2o__glm", family = "gaussian",
+                                  alpha = 0.3,
+                                  nlambdas = 50,
+                                  lambda_search = TRUE,
+                                  seed = 23) +
                 GriDiSL::defModel(name = "GLM",
                                   estimator = "h2o__glm", family = "gaussian",
                                   search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
@@ -294,17 +295,16 @@ test.holdoutSL.GLM.GBM <- function() {
                                   missing_values_handling = c("MeanImputation"),
                                   seed = 23) +
                 GriDiSL::defModel(estimator = "h2o__gbm", family = "gaussian",
-                         search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
-                         param_grid = gbm_hyper_models, seed = 23,
-                         stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
+                                  search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
+                                  param_grid = gbm_hyper_models, seed = 23,
+                                  stopping_rounds = 5,
+                                  stopping_tolerance = 1e-4,
+                                  stopping_metric = "MSE",
+                                  score_tree_interval = 10)
 
   # --------------------------------------------------------------------------------------------
   ## Fit the model based on additional special features (summaries) of the outcomes:
-  # --------------------------------------------------------------------------------------------
-  ## add holdout indicator column
-  cpp_holdout <- GriDiSL::add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 12345)
-
-  mfit_hold2 <- fit_growth(GRIDparams,
+  mfit_hold <- fit_growth(GRIDparams,
                            ID = "subjid",
                            t_name = "agedays",
                            x = c("agedays", covars),
@@ -314,14 +314,41 @@ test.holdoutSL.GLM.GBM <- function() {
                            method = "holdout",
                            use_new_features = TRUE)
 
-  train_dat <- GriDiSL::get_train_data(mfit_hold2)
+  ## ------------------------------------------------------------------------------------------------
+  ## Combining fits for observed data points, holdout points and grid of points.
+  ## Returns a single dataset, one row per subject.
+  all_preds <- predict_all(mfit_hold, cpp_holdout, add_grid = TRUE, add_holdout = TRUE)
+  ## add a column with subject specific growth trajectories (plots)
+  all_preds <- all_preds %>%
+               add_trajectory_plot()
+  ## plot the whole thing
+  trelliscopejs::trelliscope(all_preds, name = "test")
+
+  ## ------------------------------------------------------------------------------------------------
+  ## II. Define a function that can convert fits_all into an object that can be accepted by hbgd package
+  ##     See function create_fittedTrajectory_1subj for specific items that need to be added to each subject row.
+  ## ------------------------------------------------------------------------------------------------
+  ### .......
+  ### TBD
+  ### .......
+
+  cpp_holdout
+
+  all_preds[31, ][["fit"]][[1]][["xy"]]
+  all_preds[31, ][["fit"]][[1]][["xy"]]
+
+  names(all_preds[31, ][["fit"]][[1]])
+
+
+
+  train_dat <- GriDiSL::get_train_data(mfit_hold)
   print(train_dat)
   checkTrue(nrow(train_dat)==sum(!cpp_holdout[["hold"]]))
-  val_dat <- GriDiSL::get_validation_data(mfit_hold2)
+  val_dat <- GriDiSL::get_validation_data(mfit_hold)
   print(val_dat)
   checkTrue(nrow(val_dat)==sum(cpp_holdout[["hold"]]))
 
-  print("Holdout MSE, using the holdout Y for prediction"); print(str(mfit_hold2$getMSE))
+  print("Holdout MSE, using the holdout Y for prediction"); print(str(mfit_hold$getMSE))
   # List of 3
   #  $ :List of 1
   #   ..$ M.1.h2o.glm: num 1.46
@@ -348,178 +375,57 @@ test.holdoutSL.GLM.GBM <- function() {
   # [1] 1.776226
 
   ## Predictions for new data based on best SL model trained on all data:
-  preds_alldat <- predict_growth(mfit_hold2, newdata = cpp_holdout, add_subject_data = TRUE)
+  preds_alldat <- predict_growth(mfit_hold, newdata = cpp_holdout, add_subject_data = TRUE)
   preds_alldat[]
 
   ## Predictions for all holdout data points for all models trained on non-holdout data:
-  preds_holdout <- predict_growth(mfit_hold2, holdout = TRUE, add_subject_data = TRUE)
+  preds_holdout <- predict_growth(mfit_hold, holdout = TRUE, add_subject_data = TRUE)
   preds_holdout[]
 
   ## Predictions for training data from models trained on non-holdout data (default):
   ## NOT IMPLEMENTED
-  # preds_train <- predict_model(mfit_hold2, add_subject_data = TRUE)
+  # preds_train <- predict_model(mfit_hold, add_subject_data = TRUE)
   # preds_train[]
-  # preds_train <- predict_model(mfit_hold2, predict_only_bestK_models = 2, add_subject_data = TRUE)
+  # preds_train <- predict_model(mfit_hold, predict_only_bestK_models = 2, add_subject_data = TRUE)
   # preds_train[]
-  # holdPredDT <- growthcurveSL:::predict_holdout(mfit_hold2, predict_only_bestK_models = 5, add_subject_data = TRUE)
+  # holdPredDT <- growthcurveSL:::predict_holdout(mfit_hold, predict_only_bestK_models = 5, add_subject_data = TRUE)
 
   ## does not work right now, since it doesn't know how to define the special features!!!!!
-  # preds_holdout_alldat <- predict_model(mfit_hold2, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
+  # preds_holdout_alldat <- predict_model(mfit_hold, newdata = cpp_holdout, predict_only_bestK_models = 1, add_subject_data = TRUE)
   ## Instead, have to first manually define features for entire dataset - predictions will be for a model trained on non-holdouts only!
-  # cpp_plus <- define_features(cpp_holdout, nodes = mfit_hold2$OData_train$nodes, train_set = TRUE, holdout = FALSE)
+  # cpp_plus <- define_features(cpp_holdout, nodes = mfit_hold$OData_train$nodes, train_set = TRUE, holdout = FALSE)
   cpp_plus <- define_features_drop(cpp_holdout, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
-  preds_holdout_alldat <- GriDiSL::predict_SL(mfit_hold2, newdata = cpp_plus, add_subject_data = TRUE)
+  preds_holdout_alldat <- GriDiSL::predict_SL(mfit_hold, newdata = cpp_plus, add_subject_data = TRUE)
   preds_holdout_alldat[]
 
-  print("10 best MSEs among all learners: "); print(mfit_hold2$get_best_MSEs(K = 5))
-  models <- mfit_hold2$get_best_models(K = 10)
+  print("10 best MSEs among all learners: "); print(mfit_hold$get_best_MSEs(K = 5))
+  models <- mfit_hold$get_best_models(K = 10)
   models[[1]]
 
   print("Top 5 models: "); print(models)
-  res_tab <- mfit_hold2$get_best_MSE_table(K = 5)
+  res_tab <- mfit_hold$get_best_MSE_table(K = 5)
   print("5 best models among all learners: "); print(res_tab)
-  GriDiSL::make_model_report(mfit_hold2, data = cpp_holdout, K = 10, format = "html", openFile = FALSE)
+  GriDiSL::make_model_report(mfit_hold, data = cpp_holdout, K = 10, format = "html", openFile = FALSE)
 
   ## ------------------------------------------------------------------------------------------------
   ## Predicting the entire curve (grid)
   ## Check  predict_save_tgrid() works as intended
   ## ------------------------------------------------------------------------------------------------
   cpp_all_train <- define_features_drop(cpp_holdout, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
-  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2, hold_column = "hold")
-  preds_grid <- predict_growth(mfit_hold2, newdata = cpp_all_grid, grid = TRUE, add_subject_data = TRUE)
+  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2)
+  preds_grid <- predict_growth(mfit_hold, newdata = cpp_all_grid, grid = TRUE, add_subject_data = TRUE)
   preds_grid[]
 
-  ## ------------------------------------------------------------------------------------------------
-  ## Combining fits for observed data points, holdout points and grid of points
-  ## Merge all into a single dataset
-  ## ------------------------------------------------------------------------------------------------
-
-  ## ------------------------------------------------------------------------------------------------
-  ## I. This is going to be the default predict_all() function.
-  ##    Always creates 4 entries (xy, fit, fitgrid, holdout), arguments define if all 4 should be
-  ##    populated.
-  ##    (*) Some may be left empty, e.g., if no model selection then hold_bysujb will be empty ----
-  ##        Make sure EMPTY data frame is always defined for plotting compatibility.
-  ##    (*) Make this part of GriDiSL package -- pass the dataset of t grids as an arg.
-  ##    (*) The return object is the final fits_all that nests everything into fit column-list
-  ## ------------------------------------------------------------------------------------------------
-  library("magrittr")
-  unique_subj <- observed_bysujb %>%
-                 dplyr::distinct_("subjid")
-
-  obs_bysujb <- cpp_holdout %>%
-                dplyr::rename_("x" = "agedays", "y" = "haz") %>%
-                dplyr::select_("subjid", "x", "y") %>%
-                dplyr::group_by_("subjid") %>%
-                tidyr::nest(.key = "xy")
-
-  fit_bysujb <- preds_alldat %>%
-                dplyr::rename_("x" = "agedays", "y" = "preds") %>%
-                dplyr::group_by_("subjid") %>%
-                tidyr::nest(.key = "fit")
-
-  fitgrid_bysujb <- preds_grid %>%
-                    dplyr::rename_("x" = "agedays", "y" = "preds") %>%
-                    dplyr::group_by_("subjid") %>%
-                    tidyr::nest(.key = "fitgrid")
-
-  hold_bysujb <-  unique_subj %>%
-                  dplyr::left_join(preds_holdout) %>%
-                  dplyr::rename_("x" = "agedays", "y" = "preds") %>%
-                  dplyr::group_by_("subjid") %>%
-                  tidyr::nest(.key = "holdout")
-
-  fits_all <- observed_bysujb %>%
-              dplyr::left_join(fit_bysujb) %>%
-              dplyr::left_join(fitgrid_bysujb) %>%
-              dplyr::left_join(hold_bysujb)
-
-  fits_all <- fits_all %>%
-              dplyr::group_by_("subjid") %>%
-              tidyr::nest(.key = "fit")
-
-  ## ------------------------------------------------------------------------------------------------
-  ## II. Define a function that can convert fits_all into an object that can be accepted by hbgd package
-  ##     See function create_fittedTrajectory_1subj for specific items that need to be added to each subject row.
-  ## ------------------------------------------------------------------------------------------------
-  ### .......
-  ### TBD
-  ### .......
-
-  ## ------------------------------------------------------------------------------------------------
-  ## III. This is going to be the default plot() function (in GriDiSL and/or growthcurveSL).
-  ##      Later might add ggplot2 support as well.
-  ## ------------------------------------------------------------------------------------------------
-  fits_all_plot <- fits_all %>%
-              plyr::mutate(panel = trelliscopejs::map_plot(fit,
-                ~ rbokeh::figure(xlab = "age", ylab = "growth") %>%
-                  rbokeh::ly_points(x, y, data = .x[["xy"]], color = "black") %>%
-                  rbokeh::ly_points(x, y, data = .x[["fit"]], color = "black", glyph = 19, size = 4) %>%
-                  rbokeh::ly_lines(x, y, data = .x[["fitgrid"]], color = "grey") %>%
-                  rbokeh::ly_points(x, y, data = .x[["holdout"]], color = "red")
-                  # {if (!is.null(.x[["holdout"]])) {} else {NULL}}
-                  ))
-                   # %>%
-
-  trelliscopejs::trelliscope(fits_all_plot, name = "city_vs_highway_mpg")
-
-library("magrittr")
-library("gapminder")
-   # library(dplyr)
-   # library(tidyr)
-   # library(rbokeh)
-   # library(gapminder)
-# dat <- dat %>%
-#   add_all_cogs() %>%
-#   add_trajectory_plot() %>%
-#   trelliscope(name = "test")
-
- # nest gapminder data by country
- by_country <- gapminder %>%
-   group_by(country, continent) %>%
-   nest()
-
- # add in a plot column with map_plot
- by_country <- by_country %>% mutate(
-   panel = map_plot(data,
-     ~ figure(xlim = c(1948, 2011), ylim = c(10, 95), width = 300, tools = NULL) %>%
-         ly_points(year, lifeExp, data = .x, hover = .x)
-   ))
-
- # plot it
- by_country %>%
-   trelliscope("gapminder", nrow = 2, ncol = 7)
-
-   library(dplyr)
-   library(tidyr)
-   library(rbokeh)
-   ggplot2::mpg %>%
-   group_by(manufacturer, class) %>%
-   nest() %>%
-   mutate(panel = map_plot(data,
-     ~ figure(xlab = "City mpg", ylab = "Highway mpg") %>%
-         ly_points(cty, hwy, data = .x))) %>%
-   trelliscope(name = "city_vs_highway_mpg")
-
-  ## data.table::fwrite(preds_grid[, c("subjid", "agedays", "train_point", "hold", "preds")], file = "./mfit_cv2.csv")
-
-  preds_grid2 <- predict_save_tgrid(mfit_hold2,
+  ## obtain and save grid preds in one go:
+  preds_grid2 <- predict_save_tgrid(mfit_hold,
                                     cpp_holdout,
                                     ID = "subjid",
                                     t_name = "agedays",
                                     y = "haz",
                                     tmin = 1,
                                     tmax = 500,
-                                    incr = 2,
-                                    hold_column = "hold")
+                                    incr = 2)
   preds_grid2[]
-  preds_grid_check <- preds_grid
-  preds_grid_check[, ("train_point") := cpp_all_grid[["train_point"]]][, ("hold") := cpp_all_grid[["hold"]]]
-  data.table::setcolorder(preds_grid_check, c(names(preds_grid_check)[-(ncol(preds_grid_check)-2)], "preds"))
-  checkTrue(all.equal(preds_grid_check, preds_grid2))
-
-
-
 
 
   ## ------------------------------------------------------------------------------------------------
@@ -530,21 +436,6 @@ library("gapminder")
     t_var = "agedays", y_var = "haz", sex_var ="sex", method = "holdoutSL", holdout_fits_var = names(preds_holdout)[ncol(preds_holdout)])
   trscope_trajectories(all_trjs_hold_gridSL_cpp, z = TRUE)
   trscope_trajectories(all_trjs_hold_gridSL_cpp, z = FALSE)
-
-
-by_subject <- function(dat) {
-  if (!has_data_attributes(dat))
-    dat <- get_data_attributes(dat)
-
-  # find subject-level variables so we don't nest them
-  var_summ <- attr(dat, "hbgd")$var_summ
-  subj_vars <- c("subject-level", "subject id")
-  ind <- which(var_summ$type %in% subj_vars)
-
-  group_args <- c(list(.data = dat), as.list(var_summ$variable[ind]))
-  do.call(dplyr::group_by_, group_args) %>%
-    tidyr::nest(.key = "longi")
-}
 
 
   ## Ask the fit function to determine random holdouts internally:

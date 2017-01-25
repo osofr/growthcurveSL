@@ -13,18 +13,25 @@ define_features_drop(dataDT, ID, t_name, y, train_set = TRUE, hold_column,
 
 \item{ID}{A character string name of the column that contains the unique subject identifiers.}
 
-\item{t_name}{A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).}
+\item{t_name}{A character string name of the column with integer-valued measurement time-points
+(in days, weeks, months, etc).}
 
 \item{y}{A character string name of the column that represent the response variable in the model.}
 
 \item{train_set}{Set to \code{TRUE} to define growth curve features and summaries for training data.
-Set to \code{FALSE} to define the summaries for validation data. In the latter case the summaries are defined for observation (X_i,Y_i) by first dropping that observation
-and then evaluating the summaries for the remaining observations. This is repeated in a loop for all person-time rows in the data.}
+Set to \code{FALSE} to define the summaries for validation data. In the latter case the summaries
+are defined for observation (X_i,Y_i) by first dropping that observation
+and then evaluating the summaries for the remaining observations. This is repeated in a loop for
+all person-time rows in the data.}
 
-\item{hold_column}{A column with a logical flag for holdout rows / observations (\code{TRUE} indicates that the row is a holdout).
-When \code{train_set} is \code{TRUE} the resulting output data will contain all non-HOLDOUT observations (training data points).
-When \code{train_set} is \code{FALSE} the resulting output data will contain the HOLDOUT observations only (validation data points).
-To evaluate either training or validation data summaries FOR ALL observations this argument must be missing
+\item{hold_column}{A column with a logical flag for holdout rows / observations (\code{TRUE}
+indicates that the row is a holdout).
+When \code{train_set} is \code{TRUE} the resulting output data will contain all non-HOLDOUT
+observations (training data points).
+When \code{train_set} is \code{FALSE} the resulting output data will contain the HOLDOUT observations
+only (validation data points).
+To evaluate either training or validation data summaries FOR ALL observations this argument must be
+missing
 (in which case all observation from the input data are returned with their corresponding summaries).}
 
 \item{noNAs}{...}
@@ -37,11 +44,13 @@ To evaluate either training or validation data summaries FOR ALL observations th
 ...
 }
 \description{
-Defines additional features and summaries of the growth curve person-time observations. Used for modeling and defining the training and validation sets
+Defines additional features and summaries of the growth curve person-time observations.
+Used for modeling and defining the training and validation sets
 (e.g., random holdout and cross-validation).
 By setting \code{train_set} to \code{TRUE} this function will define features using all data points as a
 full training set (no holdouts, summaries use all person-time rows).
-In contrast, when \code{train_set = TRUE} and \code{hold_column} is not missing, these features are defined only for non-holdout observations, excluding the holdout rows
+In contrast, when \code{train_set = TRUE} and \code{hold_column} is not missing,
+these features are defined only for non-holdout observations, excluding the holdout rows
 (i.e., curve summaries will be defined based on training points only while dropping all holdout observations).
 Finally, by setting \code{train_set} to \code{FALSE} one can create a validation dataset (e.g., for scoring with CV).
 In this case the summaries and features will be defined for each row data point (X_i,Y_i)

@@ -8,6 +8,7 @@ Depends:
     R (>= 3.2.1)
 Imports:
     assertthat,
+    dplyr,
     data.table,
     ggplot2,
     GriDiSL,
@@ -15,9 +16,12 @@ Imports:
     R6,
     rmarkdown,
     pander,
+    purrr,
     speedglm,
     stats,
     stringr,
+    tibble,
+    tidyr,
     zoo
 Suggests:
     brokenstick,

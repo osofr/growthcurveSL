@@ -5,7 +5,7 @@
 \title{Obtain all possible predictions with one call}
 \usage{
 predict_all(modelfit, newdata, add_holdout = FALSE, add_grid = FALSE,
-  tmin = NULL, tmax = NULL, incr = 5,
+  tmin = NULL, tmax = NULL, incr = 4,
   verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{

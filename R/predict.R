@@ -112,7 +112,7 @@ predict_all <- function(modelfit,
                         add_grid = FALSE,
                         tmin = NULL,
                         tmax = NULL,
-                        incr = 4,
+                        incr = 5,
                         verbose = getOption("growthcurveSL.verbose")) {
 
   nodes <- modelfit$OData_train$nodes

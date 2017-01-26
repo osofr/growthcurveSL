@@ -49,7 +49,8 @@ predict_growth <- function(modelfit,
   gvars$verbose <- verbose
   nodes <- modelfit$OData_train$nodes
 
-  if (missing(newdata) && holdout && !modelfit$runCV) {
+  if (missing(newdata) && holdout) {
+  # if (missing(newdata) && holdout && !modelfit$runCV) {
     ## For holdout predictions with holdoutSL the default is to use the previous validation data
     # newdata <- modelfit$OData_valid$dat.sVar
     newdata <- modelfit$OData_valid
@@ -124,7 +125,7 @@ predict_all <- function(modelfit,
 
   preds_holdout <- preds_grid <- empty_df
 
-  ## generate data with all unique subject IDs that appear in input training data
+  ## Generate data with all unique subject IDs that appear in input training data
   unique_subj <- newdata %>%
                  dplyr::distinct_(ID)
 
@@ -141,15 +142,6 @@ predict_all <- function(modelfit,
                   dplyr::rename_("x" = t_name) %>%
                   dplyr::group_by_(ID)
                 })
-
-  # fit_bysujb <- preds_alldat %>%
-  #               dplyr::rename_("x" = t_name) %>%
-  #               dplyr::group_by_(ID)
-  # obs_bysujb <- newdata %>%
-  #               dplyr::rename_("x" = t_name, "y" = y) %>%
-  #               dplyr::select_(ID, "x", "y") %>%
-  #               dplyr::group_by_(ID) %>%
-  #               dplyr::left_join(fit_bysujb)
 
   ## Predictions for all holdout data points for all models trained on non-holdout data:
   if (add_holdout)
@@ -174,18 +166,11 @@ predict_all <- function(modelfit,
 
   ## Generate data with one row per subj ID
   ## nest each prediction dataset type in its respective list-column
-
-  # obs_bysujb <- obs_bysujb %>% nest(.key = "xy")
   fit_bysujb <- fit_bysujb %>% tidyr::nest(.key = "fit")
   hold_bysujb <- hold_bysujb %>% tidyr::nest(.key = "holdout")
   fitgrid_bysujb <- fitgrid_bysujb %>% tidyr::nest(.key = "fitgrid")
 
   ## combine all 3 datasets by subject:
-  # fits_all <- obs_bysujb %>%
-  #             dplyr::left_join(fit_bysujb) %>%
-  #             dplyr::left_join(hold_bysujb) %>%
-  #             dplyr::left_join(fitgrid_bysujb)
-
   fits_all <- fit_bysujb %>%
               dplyr::left_join(hold_bysujb) %>%
               dplyr::left_join(fitgrid_bysujb)

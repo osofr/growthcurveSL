@@ -4,6 +4,7 @@
 test.holdoutfit_FACE_BS_h2o <- function() {
   # require("GriDiSL")
   # require("data.table")
+  require("h2o")
   h2o::h2o.init(nthreads = -1)
   # library("growthcurveSL")
   options(growthcurveSL.verbose = TRUE)
@@ -20,117 +21,168 @@ test.holdoutfit_FACE_BS_h2o <- function() {
   y <- "haz"
 
   run_algo <- function(fit.package, fit.algorithm) {
-
     # Fit, training on non-holdouts and using holdouts as validation set (for scoring only)
-    mfit_useY_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
-                                    data = cpp_holdout, hold_column = "hold",
-                                    models = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = TRUE, name = "useY"))
-    print("Holdout MSE, using the holdout Y for prediction"); print(mfit_useY_hold$getMSE)
+    library("magrittr")
+    library("GriDiSL")
+    mfit1 <- defModel(name = "useY",
+                      estimator = paste0(fit.package, "__", fit.algorithm),
+                      predict.w.Y = TRUE,
+                      family = "gaussian") %>%
+             fit_growth(data = cpp_holdout,
+                        method = "holdout",
+                        ID = "subjid",
+                        t_name = "agedays",
+                        x = "agedays",
+                        y = "haz",
+                        hold_column = "hold")
+
+    print("Holdout MSE, using the holdout Y for prediction"); print(mfit1$getMSE)
     # FACE MSE: [1] 0.2271609
     # BS MSE: [1] 0.02650036
     # predict for previously used holdout / validation set:
-    preds_holdout_1 <- growthcurveSL:::predict_holdout(mfit_useY_hold)
+    preds_holdout_1 <- growthcurveSL:::predict_growth(mfit1, holdout = TRUE)
     print(nrow(preds_holdout_1))     # [1] 453
-    print(head(preds_holdout_1[]))
-    #       face.useY
-    # [1,]  1.1349727
-    # [2,] -0.9447051
-    # [3,]  0.4762184
-    # [4,]  0.6611348
-    # [5,]  1.3357934
-    # [6,]  0.6251740
-    #      brokenstick.useY
-    # [1,]        1.2869520
-    # [2,]       -1.3341364
-    # [3,]        0.6166304
-    # [4,]        0.8225809
-    # [5,]        1.1366634
-    # [6,]        0.5201101
-    browser()
-    ## Obtain predictions for model trained on non-holdout obs only:
-    ## NOT IMPLEMENTED
-    # preds_train <- predict_model(mfit_useY_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-    # preds_train[]
+    print(preds_holdout_1[])
+
+    # $m.1.face.useY
+    #            preds
+    #            <num>
+    #   1:  1.13497268
+    #   2: -0.94470508
+    #   3:  0.47621843
+    #   4:  0.66113476
+    #  ---
+    # 449: -0.38502193
+    # 450:  0.89649979
+    # 451: -0.07370885
+    # 452:  1.01063739
+    # 453: -1.15840422
+
+    # m.1.brokenstick.useY
+    #           preds
+    #           <num>
+    #   1:  1.2869520
+    #   2: -1.3341364
+    #   3:  0.6166304
+    #   4:  0.8225809
+    #  ---
+    # 449: -0.6343973
+    # 450:  1.2434923
+    # 451:  0.1596915
+    # 452:  1.1282024
+    # 453: -1.9495589
 
     ## Obtain predictions for a model trained on all data:
-    preds_alldat_train <- predict_growth(mfit_useY_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-    preds_alldat_train[]
+    preds_alldat_train <- predict_growth(mfit1, newdata = cpp_holdout, add_subject_data = TRUE)
+    print(preds_alldat_train[])
 
-    mfit_cor_hold <- fit_holdoutSL(ID = "subjid", t_name = "agedays", x = "agedays", y = "haz",
-                                    data = cpp_holdout, hold_column = "hold",
-                                    models = list(fit.package = fit.package, fit.algorithm = fit.algorithm, predict.w.Y = FALSE, name = "correct"))
-    print("Holdout MSE, hiding the holdout Y for prediction"); print(mfit_cor_hold$getMSE)
+    mfit2 <-  defModel(name = "correct",
+                       estimator = paste0(fit.package, "__", fit.algorithm),
+                       predict.w.Y = FALSE,
+                       family = "gaussian") %>%
+              fit_growth(data = cpp_holdout,
+                         method = "holdout",
+                         ID = "subjid",
+                         t_name = "agedays",
+                         x = "agedays",
+                         y = "haz",
+                         hold_column = "hold")
+
+    print("Holdout MSE, hiding the holdout Y for prediction"); print(mfit2$getMSE)
     # FACE MSE: [1] 1.211989
     # BS MSE: [1] 1.186241
     # speed or reg GLM MSE: [1] 1.813257
+    # xgb GLM MSE: [1] 1.619442
     # h2o GLM MSE: [1] 1.619442
-    # GBM MSE [1] 1.531809
-    # DRF MSE [1] 1.531855
-    # deeplearning MSE [1] 1.543277
+    # xgb GBM MSE [1] 1.531563
+    # h2o GBM MSE [1] 1.531809
+    # xgb DRF MSE [1] 1.682466
+    # h2o DRF MSE [1] 1.531855
+    # h2o deeplearning MSE [1] 1.643752
 
     # predict for previously used holdout / validation set:
-    preds_holdout_2 <- growthcurveSL:::predict_holdout(mfit_cor_hold)
+    preds_holdout_2 <- predict_growth(mfit2, holdout = TRUE)
     print(nrow(preds_holdout_2)) # [1] 453
-    print(head(preds_holdout_2[]))
-    #      face.correct
-    # [1,]    0.8130066
-    # [2,]   -0.5080113
-    # [3,]    0.3607981
-    # [4,]    0.6898970
-    # [5,]    1.4985014
-    # [6,]    0.8654325
-    #          brokenstick.correct
-    # [1,]           0.5584825
-    # [2,]          -0.7488577
-    # [3,]           0.6277059
-    # [4,]           1.0331509
-    # [5,]           1.0495770
-    # [6,]           0.8009358
+    print(preds_holdout_2[])
 
-    ## Obtain predictions for model trained on non-holdout obs:
-    preds_train <- predict_model(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-    preds_train[]
+    # $m.1.face.correct:
+    #             preds
+    #             <num>
+    #   1:  0.813006593
+    #   2: -0.508011348
+    #   3:  0.360798108
+    #   4:  0.689897034
+    #  ---
+    # 449: -0.006218735
+    # 450:  0.549329997
+    # 451: -0.262319345
+    # 452:  0.854839807
+    # 453:  0.725667441
+
+    # m.1.brokenstick.correct
+    #            preds
+    #            <num>
+    #   1:  0.55848245
+    #   2: -0.74885770
+    #   3:  0.62770593
+    #   4:  1.03315090
+    #  ---
+    # 449: -0.02824323
+    # 450:  0.94357989
+    # 451: -0.14039338
+    # 452:  0.98565065
+    # 453:  0.70983542
+
     ## Obtain predictions for a model trained on all data:
-    preds_alldat_train <- predict_growth(mfit_cor_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-    preds_alldat_train[]
+    preds_alldat_train <- predict_growth(mfit2, newdata = cpp_holdout, add_subject_data = TRUE)
+    print(preds_alldat_train[])
 
-    return(list(mfit_useY_hold =  mfit_useY_hold, mfit_cor_hold =  mfit_cor_hold))
+    return(list(mfit1 =  mfit1, mfit2 =  mfit2))
   }
 
   res_FACE <- run_algo("face", "face")
   res_BS <- run_algo("brokenstick", "brokenstick")
-  res_GLM1 <- run_algo("speedglm", "glm")
-  res_GLM2 <- run_algo("glm", "glm")
+  # res_GLM1 <- run_algo("speedglm", "glm")
+  # res_GLM2 <- run_algo("glm", "glm")
+  res_xbg_GLM <- run_algo("xgboost", "glm")
   res_GLM3 <- run_algo("h2o", "glm")
+  res_xbg_GBM <- run_algo("xgboost", "gbm")
   res_GBM <- run_algo("h2o", "gbm")
+  res_xgb_DRF <- run_algo("xgboost", "drf")
   res_DRF <- run_algo("h2o", "randomForest")
   res_DP <- run_algo("h2o", "deeplearning")
 
-  mfits_stack <- GriDiSL::make_PredictionStack(res_FACE$mfit_useY_hold, res_FACE$mfit_cor_hold,
-                                      res_BS$mfit_useY_hold, res_BS$mfit_cor_hold,
-                                      res_GLM3$mfit_cor_hold, res_GBM$mfit_cor_hold,
-                                      res_DRF$mfit_cor_hold, res_DP$mfit_cor_hold
-                                      )
+  mfits_stack <- GriDiSL::make_PredictionStack(
+                                              res_FACE$mfit1, res_FACE$mfit2,
+                                               res_BS$mfit1, res_BS$mfit2,
+                                               res_xbg_GLM$mfit2, res_GLM3$mfit2,
+                                               res_xbg_GBM$mfit2, res_GBM$mfit2,
+                                               res_xgb_DRF$mfit2,  res_DRF$mfit2,
+                                               res_DP$mfit2
+                                               )
 
   print(mfits_stack$get_best_MSEs(K = 2))
   print(mfits_stack$get_best_MSE_table(K = 2))
+
+  res_GBM$mfit1$get_modelfits_grid()
+  (grids <- mfits_stack$get_modelfits_grid())
+
   make_model_report(mfits_stack, data = cpp_holdout, K = 2,
                   file.name = paste0("BS_ALL_", getOption("growthcurveSL.file.name")),
-                  format = "html", openFile = FALSE)
+                  format = "html",
+                  # openFile = FALSE)
+                  openFile = TRUE)
 
+  tab <- mfits_stack$get_best_MSE_table(K = 10)
   # get the model objects for top K models:
   top_model <- mfits_stack$get_best_models(K = 1)
-  mfits_stack$show(model_stats = TRUE, all_fits = TRUE)
-  # fetch the model fits directly:
-  res_BS$mfit_useY_hold$getfit
 
-  train_dat <- get_train_data(res_GBM$mfit_cor_hold)
-  val_dat <- get_validation_data(res_GBM$mfit_cor_hold)
+  train_dat <- get_train_data(res_GBM$mfit2)
+  val_dat <- get_validation_data(res_GBM$mfit2)
 
-  preds_tgrid_FACE <- predict_save_tgrid(res_FACE$mfit_cor_hold, cpp_holdout, ID, t_name, y, tmin = 1, tmax = 500, incr = 50, "hold")
+  preds_tgrid_FACE <- predict_save_tgrid(res_FACE$mfit2, cpp_holdout, ID, t_name, y, tmin = 1, tmax = 500, incr = 50)
   preds_tgrid_FACE[]
-  preds_tgrid_BS <- predict_save_tgrid(res_BS$mfit_cor_hold, cpp_holdout, ID, t_name, y, tmin = 1, tmax = 500, incr = 5, "hold")
-                                    # file.name = paste0(fname, "predictions"), file.path = report.path)
+  preds_tgrid_BS <- predict_save_tgrid(res_BS$mfit2, cpp_holdout, ID, t_name, y, tmin = 1, tmax = 500, incr = 5)
   preds_tgrid_BS[]
 
 }
@@ -151,11 +203,6 @@ test.holdoutSL.GLM <- function() {
   # Perform fitting with regularlized GLMs using h2o.grid
   # ----------------------------------------------------------------
   GRIDparams <-
-              # GriDiSL::defModel(estimator = "h2o__glm", family = "gaussian",
-              #            alpha = 0.3,
-              #            nlambdas = 50,
-              #            lambda_search = TRUE,
-              #            seed = 23) +
                 GriDiSL::defModel(name = "GLM",
                                   estimator = "h2o__glm", family = "gaussian",
                                   search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
@@ -164,10 +211,6 @@ test.holdoutSL.GLM <- function() {
                                     lambda = c(seq(0.001, 0.009, by = 0.001), seq(0.01, 0.09, by = 0.01))), # , seq(0.1, 0.9, by = 0.02)),
                                   missing_values_handling = c("MeanImputation"),
                                   seed = 23)
-                # GriDiSL::defModel(estimator = "h2o__gbm", family = "gaussian",
-                #          search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
-                #          param_grid = gbm_hyper_models, seed = 23,
-                #          stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
 
   mfit_holdGLM <- fit_growth(GRIDparams, ID = "subjid", t_name = "agedays",
                               y = "haz",
@@ -200,6 +243,10 @@ test.holdoutSL.GLM <- function() {
     print(mfit_holdGLM$get_best_MSEs(2))
     print(mfit_holdGLM$get_best_MSEs(15))
     BEST_GLM_model <- mfit_holdGLM$get_best_models(K = 1)[[1]]
+
+
+    grids <- mfit_holdGLM$get_modelfits_grid()
+    tab <- mfit_holdGLM$get_best_MSE_table(K = 10)
 
     make_model_report(mfit_holdGLM, data = cpp_holdout,
                     K = 10,
@@ -279,12 +326,13 @@ test.holdoutSL.GLM.GBM <- function() {
   ## add a column with subject specific growth trajectories (plots) & plot the whole thing
   library("magrittr")
   all_preds <- all_preds %>%
-               add_fit_plots() %>%
-               trelliscopejs::trelliscope(name = "test")
+               add_fit_plots()
+
+  all_preds %>%
+    trelliscopejs::trelliscope(name = "test")
 
   ## ------------------------------------------------------------------------------------------------
   ## Add cognostics and convert into an object that can be accepted by hbgd package
-  ## ------------------------------------------------------------------------------------------------
   ## devtools::install_github('hafen/hbgd', ref = "tidy")
   library("magrittr")
   sex_var <- "sex"
@@ -300,12 +348,10 @@ test.holdoutSL.GLM.GBM <- function() {
 
   add_sex <- add_sex %>%
    hbgd::add_trajectory_plot() %>%
-    dplyr::select_("subjid", "panel") %>%
+    dplyr::select_("subjid", "panel")
+
+  add_sex %>%
     trelliscopejs::trelliscope(name = "test")
-
-
-
-
 
 
   ## ------------------------------------------------------------------------------------------------
@@ -397,6 +443,16 @@ test.holdoutSL.GLM.GBM <- function() {
                                     incr = 2)
   preds_grid2[]
 
+ ## Test reporting
+ make_model_report(mfit_hold, data = cpp_holdout,
+                  K = 10,
+                  file.name = paste0("GLMs_", getOption("growthcurveSL.file.name")),
+                  title = paste0("Growth Curve Imputation with GLM"),
+                  format = "html",
+                  # keep_md = TRUE,
+                  # openFile = FALSE)
+                  openFile = TRUE)
+
 
   ## Ask the fit function to determine random holdouts internally:
   mfit_hold3 <- fit_growth(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
@@ -404,50 +460,9 @@ test.holdoutSL.GLM.GBM <- function() {
                            method = "holdout",
                            random_holdout = TRUE,
                            use_new_features = TRUE)
-  # [1] "Internally evaluated holdout / CV metrics: "
-  #          MSE     MSE.sd      RMSE                  model Model_idx order
-  # 1: 0.8543814 0.07712139 0.9243275            M.1.h2o.glm         1     1
-  # 2: 1.0871956 0.10089004 1.0426867     M.3.h2o.gbm.grid.1         3     1
-  # 3: 1.1768256 0.10501571 1.0848159     M.3.h2o.gbm.grid.2         3     2
-  # 4: 1.8880984 0.14603299 1.3740809 M.2.h2o.glm.grid.1.GLM         2     1
-  # 5: 2.9080580 0.21100212 1.7053029 M.2.h2o.glm.grid.2.GLM         2     2
-  # 6: 5.0482064 0.30907107 2.2468214 M.2.h2o.glm.grid.3.GLM         2     3
-  preds_holdout3 <- predict_growth(mfit_hold3)
-  print(preds_holdout3[])
-
-  ## get top performing model:
-  models <- mfit_hold3$get_best_models(K = 1)
-
-  ## Save the best performing h2o model fit to disk:
   ## NOT IMPLEMENTED
   # GriDiSL::save_best_h2o_model(mfit_hold3, file.path = "/Users/olegsofrygin/GoogleDrive/HBGDki/ImputationSL/sofware")
 
-  ## Fit, training on non-holdouts and using holdouts as validation set (for scoring only). No additional summaries are used
-  mfit_hold <- fit_growth(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                          data = cpp_holdout,
-                          method = "holdout",
-                          hold_column = "hold")
-  print("Holdout MSE, using the holdout Y for prediction"); print(str(mfit_hold$getMSE))
-  # [1] "Internally evaluated holdout / CV metrics: "
-  #         MSE    MSE.sd     RMSE                  model Model_idx order
-  # 1: 1.452453 0.1860723 1.205178     M.3.h2o.gbm.grid.1         3     1
-  # 2: 1.487347 0.1801421 1.219568     M.3.h2o.gbm.grid.2         3     2
-  # 3: 1.610083 0.1861891 1.268890            M.1.h2o.glm         1     1
-  # 4: 1.614382 0.1883746 1.270583 M.2.h2o.glm.grid.1.GLM         2     1
-  # 5: 1.614382 0.1883747 1.270584 M.2.h2o.glm.grid.2.GLM         2     2
-  # 6: 1.614382 0.1883747 1.270584 M.2.h2o.glm.grid.3.GLM         2     3
-
-  ## Obtain predictions from the best holdout model for all data (re-trained on all observations):
-  preds_best_all <- predict_growth(mfit_hold, newdata = cpp_holdout, add_subject_data = TRUE)
-  print(preds_best_all[])
-
-  ## Predict for best model only (based on prev. holdouts)
-  preds_holdout_all <- predict_growth(mfit_hold, holdout = TRUE)
-  print(preds_holdout_all[])
-  preds_holdout_best <- GriDiSL::get_out_of_sample_predictions(mfit_hold)
-  print(preds_holdout_best[])
-  names(preds_holdout_best) <- "holdout.preds"
-  checkTrue(all.equal(preds_holdout_all, preds_holdout_best))
 
 }
 
@@ -468,130 +483,124 @@ test.CV.SL <- function() {
   ID <- "subjid"
   t_name <- "agedays"
   y <- "haz"
-  ## ------------------------------------------------------------------------------------------------
-  ## Define learners (glm, grid glm and grid gbm)
-  ## ------------------------------------------------------------------------------------------------
-  ## glm grid learner:
-  alpha_opt <- c(0,1,seq(0.1,0.9,0.1))
-  lambda_opt <- c(0,1e-7,1e-5,1e-3,1e-1)
-  glm_hyper_models <- list(
-                            #search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
-                            alpha = alpha_opt, lambda = lambda_opt,
-                            missing_values_handling = c("MeanImputation"))
-  ## gbm grid learner:
-  gbm_hyper_models <- list(
-                           #search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
-                           ntrees = c(100, 200, 300, 500),
-                           learn_rate = c(0.005, 0.01, 0.03, 0.06),
-                           max_depth = c(3, 4, 5, 6, 9),
-                           sample_rate = c(0.7, 0.8, 0.9, 1.0),
-                           col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
-                           balance_classes = c(TRUE, FALSE))
-
-  ## this fails on latest build (lambda_search)
-  # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
-  # GRIDmodels = list(fit.package = "h2o",
-  #                  fit.algorithm = "GridLearner",
-  #                  family = "gaussian",
-  #                  grid.algorithm = c("gbm"), seed = 23,
-  #                  # "glm",
-  #                  glm = glm_hyper_models, gbm = gbm_hyper_models, learner = "h2o.glm.reg03",
-  #                  stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
-
-                # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) GriDiSL::h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
-  GRIDparams <-
-              # GriDiSL::defModel(estimator = "h2o__glm", family = "gaussian",
-              #            alpha = 0.3,
-              #            nlambdas = 50,
-              #            lambda_search = TRUE,
-              #            seed = 23) +
-                GriDiSL::defModel(estimator = "h2o__glm", family = "gaussian",
-                         search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
-                         param_grid = glm_hyper_models, seed = 23) +
-                GriDiSL::defModel(estimator = "h2o__gbm", family = "gaussian",
-                         search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
-                         param_grid = gbm_hyper_models, seed = 23,
-                         stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
 
   ## define CV folds (respecting that multiple observations per subject must fall within the same fold)
   cpp_folds <- GriDiSL::add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
 
   ## ------------------------------------------------------------------------------------------------
+  ## Define learners (glm, grid glm and grid gbm)
+  ## glm grid learner:
+  glm_hyper <- list(alpha = c(0,1,seq(0.1,0.9,0.1)),
+                    lambda = c(0,1e-7,1e-5,1e-3,1e-1))
+
+  ## gbm grid learner:
+  gbm_hyper <- list(
+                   ntrees = c(100, 200, 300, 500),
+                   learn_rate = c(0.005, 0.01, 0.03, 0.06),
+                   max_depth = c(3, 4, 5, 6, 9),
+                   sample_rate = c(0.7, 0.8, 0.9, 1.0),
+                   col_sample_rate = c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8),
+                   balance_classes = c(TRUE, FALSE))
+
+  ## this fails on latest build (lambda_search)
+  # h2o.glm.reg03 <- function(..., alpha = 0.3, nlambdas = 50, lambda_search = TRUE) GriDiSL::h2o.glm.wrapper(..., alpha = alpha, nlambdas = nlambdas, lambda_search = lambda_search)
+  GRIDparams <-
+                # GriDiSL::defModel(estimator = "h2o__glm", family = "gaussian",
+                #            alpha = 0.3,
+                #            nlambdas = 50,
+                #            lambda_search = TRUE,
+                #            seed = 23) +
+                GriDiSL::defModel(estimator = "h2o__glm", family = "gaussian",
+                         search_criteria = list(strategy = "RandomDiscrete", max_models = 3),
+                         seed = 23,
+                         param_grid = glm_hyper,
+                         missing_values_handling = c("MeanImputation")) +
+                GriDiSL::defModel(estimator = "h2o__gbm", family = "gaussian",
+                         search_criteria = list(strategy = "RandomDiscrete", max_models = 2, max_runtime_secs = 60*60),
+                         seed = 23,
+                         param_grid = gbm_hyper,
+                         stopping_rounds = 5, stopping_tolerance = 1e-4, stopping_metric = "MSE", score_tree_interval = 10)
+
+  ## ------------------------------------------------------------------------------------------------
   ## CV with manually defined fold column, no curve summary features are used as predictors
   ## -> Internal CV metrics must match all manual model scoring results
-  ## ------------------------------------------------------------------------------------------------
-  mfit_cv1 <- fit_growth(GRIDparams, ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                         data = cpp_folds, method = "cv", fold_column = "fold", use_new_features = TRUE)
-  # mfit_cv1 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-  #                      data = cpp_folds, models = GRIDparams, fold_column = "fold")
+  mfit_cv <- fit_growth(GRIDparams,
+                         data = cpp_folds,
+                         method = "cv",
+                         ID = "subjid",
+                         t_name = "agedays",
+                         x = c("agedays", covars),
+                         y = "haz",
+                         fold_column = "fold",
+                         use_new_features = TRUE)
 
+  ## ------------------------------------------------------------------------------------------------
+  ## Combining fits for observed data points, holdout points and grid of points.
+  ## Returns a single dataset, one row per subject.
+  all_preds <- predict_all(mfit_cv, cpp_folds, add_grid = TRUE, add_holdout = TRUE)
+
+  ## ------------------------------------------------------------------------------------------------
+  ## add a column with subject specific growth trajectories (plots) & plot the whole thing
+  library("magrittr")
+  all_preds <- all_preds %>%
+               add_fit_plots()
+
+  all_preds %>%
+    trelliscopejs::trelliscope(name = "test")
+
+  ## ------------------------------------------------------------------------------------------------
+  ## Add cognostics and convert into an object that can be accepted by hbgd package
+  ## devtools::install_github('hafen/hbgd', ref = "tidy")
+  library("magrittr")
+  sex_var <- "sex"
+  ID <- "subjid"
+  add_sex <- cpp_folds %>%
+             dplyr::distinct_(ID, sex_var) %>%
+             dplyr::rename_("sex" = sex_var) %>%
+             dplyr::left_join(all_preds) %>%
+             tibble::as_tibble()
+
+  add_sex <- add_sex %>%
+             plyr::mutate(fit = purrr::map2(fit, sex, ~ add_cogs_persubj(fit_dat = .x, sex = .y)))
+
+  add_sex <- add_sex %>%
+   hbgd::add_trajectory_plot() %>%
+    dplyr::select_("subjid", "panel")
+
+  add_sex %>%
+    trelliscopejs::trelliscope(name = "test")
+
+
+  ## ------------------------------------------------------------------------------------------------
   ## Best (re-trained) model predictions on data used for CV training (default):
-  preds_alldat1 <- predict_growth(mfit_cv1, add_subject_data = FALSE)
+  preds_alldat1 <- predict_growth(mfit_cv, add_subject_data = FALSE)
   print(preds_alldat1[])
 
   ## Best model predictions for new data, must match:
-  preds_alldat2 <- predict_growth(mfit_cv1, newdata = cpp_folds, add_subject_data = FALSE)
-  head(preds_alldat2[])
+  preds_alldat2 <- predict_growth(mfit_cv, newdata = cpp_folds, add_subject_data = FALSE)
+  print(preds_alldat2[])
   checkTrue(all.equal(preds_alldat1, preds_alldat2))
 
   ## Predictions for best CV model (not re-trained, trained only on non-holdouts), must match:
-  preds_best_CV <- predict_model(mfit_cv1, add_subject_data = FALSE)
-  preds_best_CV[]
-  preds_best_CV <- predict_model(mfit_cv1, add_subject_data = TRUE)
-  preds_best_CV[]
-  preds_best_CV <- predict_model(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
-  preds_best_CV[]
-  checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
-  preds_best_CV_subj <- predict_model(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = TRUE)
-  preds_best_CV_subj[]
+  ## NOT IMPLEMENTED
+  # preds_best_CV <- predict_model(mfit_cv, add_subject_data = TRUE)
+  # preds_best_CV[]
 
-  ## Predict with new data (WORKS ONLY WHEN NO SPECIAL CURVE SUMMARIES ARE USED FOR PREDICTION, OTHERWISE HAVE TO USE predict_growth)
-  preds_best_CV_2 <- predict_model(mfit_cv1, newdata = cpp_folds, predict_only_bestK_models = 1, add_subject_data = FALSE)
-  head(preds_best_CV_2[])
-  checkTrue(all.equal(as.vector(preds_best_CV_2), as.vector(preds_best_CV)))
-
-  # return training data used (as data.table)
-  train_dat <- get_train_data(mfit_cv1)
+  ## return training data used (as data.table)
+  train_dat <- GriDiSL::get_train_data(mfit_cv)
   train_dat[]
-  # return validation data used (as data.table)
-  valid_data <- get_validation_data(mfit_cv1)
+  ## return validation data used (as data.table)
+  valid_data <- GriDiSL::get_validation_data(mfit_cv)
   valid_data[]
-  # Obtain out of sample CV predictions for all training data-points
-  cv_preds <- get_out_of_sample_predictions(mfit_cv1)
+
+  ## Obtain out of sample CV predictions for all training data-points (the model used last to obtain these predictions)
+  cv_preds <- GriDiSL::get_out_of_sample_predictions(mfit_cv)
   cv_preds[]
-
-  cv_valid_preds <- get_validation_data(mfit_cv1)[, c(ID, t_name, y), with = FALSE]
-  cv_valid_preds[, ("holdout.preds") := get_out_of_sample_predictions(mfit_cv1)]
-  cv_valid_preds[]
-
-  ## Make report, save grid predictions and out of sample predictions
-  # fname <- paste0(data.name, "_", "CV_gridSL_")
-  make_model_report(mfit_cv1, K = 10, data = cpp_folds,
-                  # file.name = paste0(fname, getOption("growthcurveSL.file.name")),
-                  title = paste0("Growth Curve Imputation with cpp Data"),
-                  format = "html", keep_md = TRUE, openFile = FALSE)
-
-  ## Save out of sample CV predictions from the best model
-  # cv_valid_preds <- get_validation_data(mfit_cv1)
-  # cv_valid_preds[, ("out_of_sample_cv_preds") := get_out_of_sample_CV_predictions(mfit_cv1)]
-  cv_valid_preds <- get_out_of_sample_predictions(mfit_cv1)
-  cv_valid_preds_2 <- predict_holdout(mfit_cv1)
+  names(cv_preds) <- "preds"
+  ## Validate out-of-sample predictions based on validation data used in CV
+  cv_valid_preds_2 <- predict_growth(mfit_cv, holdout = TRUE)
   cv_valid_preds_2[]
-  cv_valid_preds_2 <- predict_holdout(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = FALSE)
-  cv_valid_preds_2[]
-  checkTrue(all.equal(cv_valid_preds, cv_valid_preds_2))
-  cv_valid_preds_2 <- predict_holdout(mfit_cv1, predict_only_bestK_models = 1, add_subject_data = TRUE)
-  cv_valid_preds_2[]
-  # data.table::fwrite(cv_valid_preds, file = file.path(report.path, paste0(fname, "out_of_sample_cv_preds", ".csv")))
-  ## Predicting and saving the entire curve (grid)
-  preds_tgrid_new <- predict_save_tgrid(mfit_cv1, cpp_folds, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 20)
-                                        # file.name = paste0(fname, "all_preds"), file.path = report.path)
-  preds_tgrid_new[]
-
-  require("hbgd")
-  all_trjs_CVgridSL_cpp <- create_all_fittedTrajectory(cpp_folds, preds_tgrid_new, cv_valid_preds_2, ID_var = "subjid",
-    t_var = "agedays", y_var = "haz", sex_var ="sex", method = "cvSL", holdout_fits_var = names(cv_valid_preds_2)[ncol(cv_valid_preds_2)])
-  # trscope_trajectories(all_trjs_CVgridSL_cpp, z = TRUE)
+  checkTrue(all.equal(cv_preds, cv_valid_preds_2))
 
   ## ------------------------------------------------------------------------------------------------
   ## Predicting the entire curve (grid)
@@ -599,150 +608,62 @@ test.CV.SL <- function() {
   cpp_all_train <- define_features_drop(cpp_folds, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
   cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2)
   cpp_all_grid[, ("fold") := NULL]
-  preds_grid <- predict_growth(mfit_cv1, newdata = cpp_all_grid, grid = TRUE, add_subject_data = TRUE)
+  preds_grid <- predict_growth(mfit_cv, newdata = cpp_all_grid, grid = TRUE, add_subject_data = TRUE)
   preds_grid[]
 
-  ## Must all match:
-  (MSE_1 <- unlist(GriDiSL::eval_MSE(mfit_cv1))) ## Use internally h2o-evaluated CV MSE
-  (MSE_2 <- unlist(GriDiSL::eval_MSE(mfit_cv1, get_validation_data(mfit_cv1)))) ## Rescore on validation data, but use old saved y values
-  (MSE_4 <- unlist(GriDiSL::eval_MSE(mfit_cv1, get_train_data(mfit_cv1)))) # rescore on training data
+  ## Re-score the models. By default prev. validation data is used if it was provided:
+  (MSE_1 <- unlist(GriDiSL::eval_MSE(mfit_cv))) ## Use internally h2o-evaluated CV MSE
+  # M.1.h2o.glm.grid.1 M.1.h2o.glm.grid.2 M.1.h2o.glm.grid.3 M.2.h2o.gbm.grid.1 M.2.h2o.gbm.grid.2
+  #         1.817785           1.837714           1.838126           1.637032           1.516350
+
+  ## MSE evaluated on the training data:
+  (MSE_train <- unlist(GriDiSL::eval_MSE(mfit_cv, GriDiSL::get_train_data(mfit_cv)))) # re-score using training data
+  # M.1.h2o.glm.grid.1 M.1.h2o.glm.grid.2 M.1.h2o.glm.grid.3 M.2.h2o.gbm.grid.1 M.2.h2o.gbm.grid.2
+  #          0.5887432          0.5888702          0.5888981          0.3293420          0.4053220
+
+  ## Re-scoring based on validation data used in CV:
+  (MSE_2 <- unlist(GriDiSL::eval_MSE(mfit_cv, GriDiSL::get_validation_data(mfit_cv)))) ## Rescore on validation data, but use old saved y values
   checkTrue(abs(sum(MSE_1 - MSE_2)) <= 10^-5)
-  checkTrue(abs(sum(MSE_1 - MSE_4)) <= 10^-5)
 
-  ## ------------------------------------------------------------------------------------------------
-  ## ADD SPECIAL curve FEATURES / summaries as predictors to CV evaluation
-  ## ------------------------------------------------------------------------------------------------
-  mfit_cv2 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                       data = cpp_folds, models = GRIDmodels,
-                       fold_column = "fold", use_new_features = TRUE)
-
-  ## Best (re-trained) model predictions on data used for CV training (default):
-  preds_alldat1 <- predict_growth(mfit_cv2, add_subject_data = FALSE)
-  print(preds_alldat1[])
-  ## Best model predictions for new data, must match:
-  preds_alldat2 <- predict_growth(mfit_cv2, newdata = cpp_folds, add_subject_data = FALSE)
-  print(preds_alldat2[])
-  checkTrue(all.equal(preds_alldat1, preds_alldat2))
-  preds_alldat2 <- predict_growth(mfit_cv2, newdata = cpp_folds[, ("fold") := NULL], add_subject_data = FALSE)
-
-  ## Predictions for best CV model (not re-trained), must match:
-  preds_best_CV <- predict_model(mfit_cv2, predict_only_bestK_models = 1, add_subject_data = FALSE)
-  print(preds_best_CV[])
-  checkTrue(all.equal(as.vector(preds_alldat1[[1]]), as.vector(preds_best_CV[[1]])))
-
-  ## Not supposed to work anymore, since cpp_folds doesn't contain special curve summaries
-  #preds_best_CV_2 <- predict_model(mfit_cv2, newdata = cpp_folds, predict_only_bestK_models = 1, add_subject_data = FALSE)
-
-  train_dat <- get_train_data(mfit_cv2)
-  valid_data <- get_validation_data(mfit_cv2)
-
-  ## 1a. Use internally h2o-evaluated CV MSE (WILL LEAD TO INCORRECT MSE).
-  (MSE_1 <- unlist(GriDiSL::eval_MSE(mfit_cv2)))
-  ## 1b. Use training data to score CV models (should be the same as 1a)
-  (MSE_4 <- unlist(GriDiSL::eval_MSE(mfit_cv2, get_train_data(mfit_cv2)))) # rescore on training data
-  checkTrue(abs(sum(MSE_1 - MSE_4)) <= 10^-5)
-  ## 2. Use validation data for scoring that build curve summaries by leaving one obs out at a time (CORRECT)
-  ## NO LONGER NEED TO MATCH SINCE THE MANUAL SCORING IS BASED ON SUMMARIES THAT LEAVE OUT 1 OBS AT A TIME:
-  (MSE_2 <- unlist(GriDiSL::eval_MSE(mfit_cv2, get_validation_data(mfit_cv2)))) ## Rescore on validation data
-
-  ## ------------------------------------------------------------------------------------------------
-  ## Predicting the entire curve (grid)
-  ## ------------------------------------------------------------------------------------------------
-  cpp_all_train <- define_features_drop(cpp_folds, ID = "subjid", t_name = "agedays", y = "haz", train_set = TRUE)
-  cpp_all_grid <- define_tgrid(cpp_all_train, ID = "subjid", t_name = "agedays", y = "haz", tmin = 1, tmax = 500, incr = 2)
-  preds_grid <- predict_growth(mfit_cv2, newdata = cpp_all_grid, grid = TRUE, add_subject_data = TRUE)
-  print(preds_grid[])
-
-  # make_model_report(mfit_cv2, data = cpp_folds, K = 10, format = "html", openFile = TRUE)
-  # data.table::fwrite(preds_grid[, c("subjid", "agedays", "preds")], file = "./mfit_cv2.csv")
-
-  ## ------------------------------------------------------------------------------------------------
-  ## Internally define folds for CV
-  ## ------------------------------------------------------------------------------------------------
-  mfit_cv3 <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                       data = cpp_folds, models = GRIDmodels,
-                       nfolds = 5, use_new_features = TRUE)
-  (models <- mfit_cv3$get_best_models(K = 1))
 
   ## ------------------------------------------------------------------------------------
   ## CHECKING CV IMPLEMENTATION VS. INTERNAL H2O CV
   ## ------------------------------------------------------------------------------------
-  # cpp_folds <- GriDiSL::add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
-  cpp_folds <- GriDiSL::add_CVfolds_ind(cpp, ID = "subjid", nfolds = 10, seed = 23)
-  mfit_cv <- fit_cvSL(ID = "subjid", t_name = "agedays", x = c("agedays", covars), y = "haz",
-                      data = cpp_folds, models = GRIDmodels, fold_column = "fold", use_new_features = TRUE)
-
   train_dat <- get_train_data(mfit_cv)
   valid_data <- get_validation_data(mfit_cv)
 
   # Re-score on training data (should be equivalent to h2o-based CV metrics):
   preds_cv_check <- GriDiSL::eval_MSE(mfit_cv, get_train_data(mfit_cv))
-  # Internal CV MSE and CV evaluated on train_data should be the same:
-  mfit_cv$getmodel_ids
 
-  for (model_name in names(mfit_cv$getmodel_ids)) {
-    check_model <- mfit_cv$getmodel_byname(model_name)
-    # Internal H2O holdout CV predictions by fold:
-    # cv_preds_fold <- h2o.cross_validation_predictions(check_model[[1]])
-    # List of individual holdout predictions:
-    # Holdout (out-of-sample) predictions for all of training data:
-    cv_preds_all <- as.vector(h2o.cross_validation_holdout_predictions(check_model[[1]])) - preds_cv_check[[model_name]]
 
-    # MUST BE TRUE FOR ALL MODELS
-    print(paste0("CV validity for model: ", model_name))
-    test1 <- mfit_cv$getMSE[[model_name]] - check_model[[1]]@model$cross_validation_metrics@metrics$MSE < (10^-6)
-    print(test1); checkTrue(test1)
-    test2 <- sum(cv_preds_all, na.rm = TRUE) < 10^-8
-    print(test2); checkTrue(test1)
-  }
+  ## Internal CV MSE and CV evaluated on train_data should be the same:
+  ## NOT IMPLEMENTED
+  # mfit_cv$getmodel_ids
+  # for (model_name in names(mfit_cv$getmodel_ids)) {
+  #   check_model <- mfit_cv$getmodel_byname(model_name)
+  #   # Internal H2O holdout CV predictions by fold:
+  #   # cv_preds_fold <- h2o.cross_validation_predictions(check_model[[1]])
+  #   # List of individual holdout predictions:
+  #   # Holdout (out-of-sample) predictions for all of training data:
+  #   cv_preds_all <- as.vector(h2o.cross_validation_holdout_predictions(check_model[[1]])) - preds_cv_check[[model_name]]
 
-  # ## -----------------------------------------------------------------------------
-  # ## Getting cv folds and cv models by fold:
-  # ## -----------------------------------------------------------------------------
-  # str(model_cv)
-  # model_cv@model$cross_validation_fold_assignment_frame_id
-  # model_cv@model$cross_validation_fold_assignment_frame_id
-  # model_cv@model$cross_validation_metrics
-  # model_cv@model$cross_validation_metrics_summary
-
-  # fold <- as.data.frame(h2o.cross_validation_fold_assignment(model_cv))
-
-  # # List of holdout cv predictions (by fold & cv model):
-  # cv_predictions <- h2o.cross_validation_predictions(model_cv)
-
-  # # List of individual holdout predictions:
-  # model_cv@model$cross_validation_predictions[[1]]
-  # hframe <- as.data.frame(h2o.getFrame(model_cv@model$cross_validation_predictions[[1]]$name))
-  # cbind(as.data.frame(cv_predictions[[1]]), hframe, fold)
-
-  # # Holdout (out of sample) predictions for all of training data:
-  # predictions <- h2o.cross_validation_holdout_predictions(model_cv)
-  # model_cv@model$cross_validation_holdout_predictions_frame_id
-  # h2o.getFrame(model_cv@model$cross_validation_holdout_predictions_frame_id$name)
-
-  # # Individual fold models (cv models).
-  # # These would need to be re-scored based on new holdout predictors:
-  # cv_models <- h2o.cross_validation_models(model_cv)
-  # model_cv_1 <- h2o.getModel(model_cv@model$cross_validation_models[[1]]$name)
-  # model_cv_1@model$training_metrics
-  # model_cv_1@model$validation_metrics
-
-  # # DO PREDICTION FOR EACH cv MODEL BASED ON A NEW HOLDOUT SET (new summaries)
-  # fold <- as.data.frame(h2o.cross_validation_fold_assignment(model_cv))
-  # cv_models <- h2o.cross_validation_models(model_cv)
-  # finalpreds <- vector(mode = "numeric", length = nrow(cpp_folds))
-  # vfolds_cat <- sort(unique(fold$fold_assignment))
-  # for (vfold_idx in seq_along(vfolds_cat)) {
-  #     fold_idx <- fold$fold_assignment %in% vfolds_cat[vfold_idx]
-  #     # REPLACE WITH TEST / VALIDATION DATA:
-  #     newframe <- as.h2o(cpp_folds[fold_idx,])
-  #     # newpreds <- h2o.predict(cv_models[[vfold_idx]], newdata = newframe)
-  #     newpreds <- predict(cv_models[[vfold_idx]], newdata = newframe)
-  #     finalpreds[fold_idx] <- as.vector(newpreds[, "predict"])
+  #   # MUST BE TRUE FOR ALL MODELS
+  #   print(paste0("CV validity for model: ", model_name))
+  #   test1 <- mfit_cv$getMSE[[model_name]] - check_model[[1]]@model$cross_validation_metrics@metrics$MSE < (10^-6)
+  #   print(test1); checkTrue(test1)
+  #   test2 <- sum(cv_preds_all, na.rm = TRUE) < 10^-8
+  #   print(test2); checkTrue(test1)
   # }
 
-  # sum(finalpreds - as.vector(predictions[, "predict"]))
-  # cbind(finalpreds, as.vector(predictions[, "predict"]), finalpreds - as.vector(predictions[, "predict"]))
+  ## Make report, save grid predictions and out of sample predictions
+  # fname <- paste0(data.name, "_", "CV_gridSL_")
+  make_model_report(mfit_cv, K = 10, data = cpp_folds,
+                  # file.name = paste0(fname, getOption("growthcurveSL.file.name")),
+                  title = paste0("Growth Curve Imputation with cpp Data"),
+                  format = "html", keep_md = FALSE,
+                  # openFile = TRUE)
+                  openFile = FALSE)
+
 }
 
 

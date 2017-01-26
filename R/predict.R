@@ -91,9 +91,11 @@ predict_growth <- function(modelfit,
 #' used for scoring the current best model fit.
 #' @param add_grid Optional flag, set to \code{TRUE} to add a grid of equally spaced
 #' predictions over some range of the time variable for the current best model fit.
-#' @param tmin Min t value of the grid
-#' @param tmax Max t value of the grid
-#' @param incr Increment value for the grid of \code{t}'s
+#' @param tmin Min t value for predicting the entire growth curve.
+#' By default the lowest observed value in \code{newdata} is used.
+#' @param tmax Max t value for predicting the entire growth curve.
+#' By default the highest observed value in \code{newdata} is used.
+#' @param incr Increment time variable value for predicting the entire growth curve.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to
 #' the console.
 #' @return A data.frame with one row per subject.
@@ -108,15 +110,18 @@ predict_all <- function(modelfit,
                         newdata,
                         add_holdout = FALSE,
                         add_grid = FALSE,
-                        tmin = 1,
-                        tmax = 500,
-                        incr = 2,
+                        tmin = NULL,
+                        tmax = NULL,
+                        incr = 5,
                         verbose = getOption("growthcurveSL.verbose")) {
 
   nodes <- modelfit$OData_train$nodes
   ID <- nodes$IDnode
   t_name <- nodes$tnode
   y <- nodes$Ynode
+
+  if (is.null(tmin)) tmin <- min(newdata[[t_name]])
+  if (is.null(tmax)) tmax <- max(newdata[[t_name]])
 
   empty_df = data.frame(matrix(vector(), 0, 3,
                         dimnames=list(c(), c(ID, t_name, "preds"))),

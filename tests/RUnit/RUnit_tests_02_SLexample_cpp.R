@@ -167,7 +167,7 @@ test.holdoutfit_FACE_BS_h2o <- function() {
   res_GBM$mfit1$get_modelfits_grid()
   (grids <- mfits_stack$get_modelfits_grid())
 
-  make_model_report(mfits_stack, data = cpp_holdout, K = 2,
+  GriDiSL::make_model_report(mfits_stack, data = cpp_holdout, K = 2,
                   file.name = paste0("BS_ALL_", getOption("growthcurveSL.file.name")),
                   format = "html",
                   # openFile = FALSE)
@@ -202,8 +202,7 @@ test.holdoutSL.GLM <- function() {
   # ----------------------------------------------------------------
   # Perform fitting with regularlized GLMs using h2o.grid
   # ----------------------------------------------------------------
-  GRIDparams <-
-                GriDiSL::defModel(name = "GLM",
+  GRIDparams <- GriDiSL::defModel(name = "GLM",
                                   estimator = "h2o__glm", family = "gaussian",
                                   search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
                                   param_grid = list(
@@ -248,14 +247,14 @@ test.holdoutSL.GLM <- function() {
     grids <- mfit_holdGLM$get_modelfits_grid()
     tab <- mfit_holdGLM$get_best_MSE_table(K = 10)
 
-    make_model_report(mfit_holdGLM, data = cpp_holdout,
+    GriDiSL::make_model_report(mfit_holdGLM, data = cpp_holdout,
                     K = 10,
                     file.name = paste0("GLMs_", getOption("growthcurveSL.file.name")),
                     title = paste0("Growth Curve Imputation with GLM"),
                     format = "html",
                     # keep_md = TRUE,
-                    # openFile = FALSE)
-                    openFile = TRUE)
+                    openFile = FALSE)
+                    # openFile = TRUE)
 
 }
 
@@ -444,7 +443,7 @@ test.holdoutSL.GLM.GBM <- function() {
   preds_grid2[]
 
  ## Test reporting
- make_model_report(mfit_hold, data = cpp_holdout,
+ GriDiSL::make_model_report(mfit_hold, data = cpp_holdout,
                   K = 10,
                   file.name = paste0("GLMs_", getOption("growthcurveSL.file.name")),
                   title = paste0("Growth Curve Imputation with GLM"),
@@ -657,7 +656,7 @@ test.CV.SL <- function() {
 
   ## Make report, save grid predictions and out of sample predictions
   # fname <- paste0(data.name, "_", "CV_gridSL_")
-  make_model_report(mfit_cv, K = 10, data = cpp_folds,
+  GriDiSL::make_model_report(mfit_cv, K = 10, data = cpp_folds,
                   # file.name = paste0(fname, getOption("growthcurveSL.file.name")),
                   title = paste0("Growth Curve Imputation with cpp Data"),
                   format = "html", keep_md = FALSE,

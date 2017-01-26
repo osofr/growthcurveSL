@@ -5,7 +5,7 @@
 \title{Obtain all possible predictions with one call}
 \usage{
 predict_all(modelfit, newdata, add_holdout = FALSE, add_grid = FALSE,
-  tmin = 1, tmax = 500, incr = 2,
+  tmin = NULL, tmax = NULL, incr = 5,
   verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
@@ -19,11 +19,13 @@ used for scoring the current best model fit.}
 \item{add_grid}{Optional flag, set to \code{TRUE} to add a grid of equally spaced
 predictions over some range of the time variable for the current best model fit.}
 
-\item{tmin}{Min t value of the grid}
+\item{tmin}{Min t value for predicting the entire growth curve.
+By default the lowest observed value in \code{newdata} is used.}
 
-\item{tmax}{Max t value of the grid}
+\item{tmax}{Max t value for predicting the entire growth curve.
+By default the highest observed value in \code{newdata} is used.}
 
-\item{incr}{Increment value for the grid of \code{t}'s}
+\item{incr}{Increment time variable value for predicting the entire growth curve.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to
 the console.}

@@ -88,7 +88,7 @@ who_zscore2htcm <- function(agedays, z = 0, sex = "Female") {
 convert_to_hbgd <- function(fit_dat_all, data, ID = "SUBJID", sexvar = "SEX", method = "default") {
     fit_dat_hbgd <- data %>%
         dplyr::distinct_(ID, sexvar) %>%
-        dplyr::rename_("sex" = sexvar) %>%
+        # dplyr::rename_("sex" = sexvar) %>%
         dplyr::left_join(fit_dat_all) %>%
         tibble::as_tibble() %>%
         plyr::mutate(fit = purrr::map2(fit, sex,

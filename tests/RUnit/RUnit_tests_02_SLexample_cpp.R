@@ -333,23 +333,27 @@ test.holdoutSL.GLM.GBM <- function() {
   ## ------------------------------------------------------------------------------------------------
   ## Add cognostics and convert into an object that can be accepted by hbgd package
   ## devtools::install_github('hafen/hbgd', ref = "tidy")
-  library("magrittr")
-  sex_var <- "sex"
-  ID <- "subjid"
-  add_sex <- cpp_holdout %>%
-             dplyr::distinct_(ID, sex_var) %>%
-             dplyr::rename_("sex" = sex_var) %>%
-             dplyr::left_join(all_preds) %>%
-             tibble::as_tibble()
 
-  add_sex <- add_sex %>%
-             plyr::mutate(fit = purrr::map2(fit, sex, ~ add_cogs_persubj(fit_dat = .x, sex = .y)))
+   all_preds_hbgd <- all_preds %>%
+      convert_to_hbgd(inputDT, ID, sexvar, "brokenstick")
 
-  add_sex <- add_sex %>%
+  # library("magrittr")
+  # sex_var <- "sex"
+  # ID <- "subjid"
+  # add_sex <- cpp_holdout %>%
+  #            dplyr::distinct_(ID, sex_var) %>%
+  #            dplyr::rename_("sex" = sex_var) %>%
+  #            dplyr::left_join(all_preds) %>%
+  #            tibble::as_tibble()
+
+  # add_sex <- add_sex %>%
+  #            plyr::mutate(fit = purrr::map2(fit, sex, ~ add_cogs_persubj(fit_dat = .x, sex = .y)))
+
+  all_preds_hbgd <- all_preds_hbgd %>%
    hbgd::add_trajectory_plot() %>%
     dplyr::select_("subjid", "panel")
 
-  add_sex %>%
+  all_preds_hbgd %>%
     trelliscopejs::trelliscope(name = "test")
 
 

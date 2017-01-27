@@ -326,36 +326,19 @@ test.holdoutSL.GLM.GBM <- function() {
   library("magrittr")
   all_preds <- all_preds %>%
                add_fit_plots()
-
   all_preds %>%
     trelliscopejs::trelliscope(name = "test")
 
   ## ------------------------------------------------------------------------------------------------
   ## Add cognostics and convert into an object that can be accepted by hbgd package
   ## devtools::install_github('hafen/hbgd', ref = "tidy")
-
-   all_preds_hbgd <- all_preds %>%
-      convert_to_hbgd(inputDT, ID, sexvar, "brokenstick")
-
-  # library("magrittr")
-  # sex_var <- "sex"
-  # ID <- "subjid"
-  # add_sex <- cpp_holdout %>%
-  #            dplyr::distinct_(ID, sex_var) %>%
-  #            dplyr::rename_("sex" = sex_var) %>%
-  #            dplyr::left_join(all_preds) %>%
-  #            tibble::as_tibble()
-
-  # add_sex <- add_sex %>%
-  #            plyr::mutate(fit = purrr::map2(fit, sex, ~ add_cogs_persubj(fit_dat = .x, sex = .y)))
-
-  all_preds_hbgd <- all_preds_hbgd %>%
-   hbgd::add_trajectory_plot() %>%
-    dplyr::select_("subjid", "panel")
+  all_preds_hbgd <- all_preds %>%
+                     convert_to_hbgd(cpp_holdout, "sex", "brokenstick")
 
   all_preds_hbgd %>%
-    trelliscopejs::trelliscope(name = "test")
-
+                     hbgd::add_trajectory_plot() %>%
+                     dplyr::select_("subjid", "panel") %>%
+                     trelliscopejs::trelliscope(name = "test")
 
   ## ------------------------------------------------------------------------------------------------
   ## Test MSE evaluation, training / validation data retrieval
@@ -554,25 +537,13 @@ test.CV.SL <- function() {
   ## ------------------------------------------------------------------------------------------------
   ## Add cognostics and convert into an object that can be accepted by hbgd package
   ## devtools::install_github('hafen/hbgd', ref = "tidy")
-  library("magrittr")
-  sex_var <- "sex"
-  ID <- "subjid"
-  add_sex <- cpp_folds %>%
-             dplyr::distinct_(ID, sex_var) %>%
-             dplyr::rename_("sex" = sex_var) %>%
-             dplyr::left_join(all_preds) %>%
-             tibble::as_tibble()
+  all_preds_hbgd <- all_preds %>%
+                     convert_to_hbgd(cpp_folds, "sex", "brokenstick")
 
-  add_sex <- add_sex %>%
-             plyr::mutate(fit = purrr::map2(fit, sex, ~ add_cogs_persubj(fit_dat = .x, sex = .y)))
-
-  add_sex <- add_sex %>%
-   hbgd::add_trajectory_plot() %>%
-    dplyr::select_("subjid", "panel")
-
-  add_sex %>%
-    trelliscopejs::trelliscope(name = "test")
-
+  all_preds_hbgd %>%
+                     hbgd::add_trajectory_plot() %>%
+                     dplyr::select_("subjid", "panel") %>%
+                     trelliscopejs::trelliscope(name = "test")
 
   ## ------------------------------------------------------------------------------------------------
   ## Best (re-trained) model predictions on data used for CV training (default):

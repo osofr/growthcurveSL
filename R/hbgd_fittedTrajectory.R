@@ -95,9 +95,7 @@ convert_to_hbgd <- function(fit_dat_all, data, sexvar = "SEX", method = "default
         dplyr::left_join(fit_dat_all) %>%
         tibble::as_tibble() %>%
         plyr::mutate(fit = purrr::map2(fit, sex,
-            ~ add_cogs_persubj(fit_dat = .x, sex = .y, method = method))) %>%
-
-        dplyr::rename_(sexvar = "sex")
+            ~ add_cogs_persubj(fit_dat = .x, sex = .y, method = method)))
 
     fit_dat_hbgd
 }

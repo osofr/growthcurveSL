@@ -3,6 +3,7 @@
 S3method(fit_growth,ModelStack)
 export(add_cogs_persubj)
 export(add_fit_plots)
+export(convert_to_hbgd)
 export(define_features_drop)
 export(define_tgrid)
 export(fit_growth)

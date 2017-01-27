@@ -77,6 +77,27 @@ who_zscore2htcm <- function(agedays, z = 0, sex = "Female") {
 }
 
 
+#' Wrapper to convert fit object into \code{hbgd}-compatible object
+#' @param fit_dat_all Dataset produced by calling \code{\link{predict_all}} function.
+#' @param data The input data used for training.
+#' @param ID The column name in input data containing unique subject identifiers.
+#' @param sexvar The column name in the input data containing subject gender coded as "Male" / "Female".
+#' @param method The name of the method that produces the growth curve fits.
+#' @return ...
+#' @export
+convert_to_hbgd <- function(fit_dat_all, data, ID = "SUBJID", sexvar = "SEX", method = "default") {
+    fit_dat_hbgd <- data %>%
+        dplyr::distinct_(ID, sexvar) %>%
+        dplyr::rename_("sex" = sexvar) %>%
+        dplyr::left_join(fit_dat_all) %>%
+        tibble::as_tibble() %>%
+        plyr::mutate(fit = purrr::map2(fit, sex,
+            ~ add_cogs_persubj(fit_dat = .x, sex = .y, method = method)))
+
+    fit_dat_hbgd
+}
+
+
 #' Create a fittedTrajectory object with fits for a single subject
 #'
 #' Creates objects of class \code{fittedTrajectory} with growth curve predictions, one object for subject ID in the data.

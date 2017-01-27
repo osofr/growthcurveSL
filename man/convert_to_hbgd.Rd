@@ -4,19 +4,18 @@
 \alias{convert_to_hbgd}
 \title{Wrapper to convert fit object into \code{hbgd}-compatible object}
 \usage{
-convert_to_hbgd(fit_dat_all, data, ID = "SUBJID", sexvar = "SEX",
-  method = "default")
+convert_to_hbgd(fit_dat_all, data, sexvar = "SEX", method = "default")
 }
 \arguments{
 \item{fit_dat_all}{Dataset produced by calling \code{\link{predict_all}} function.}
 
 \item{data}{The input data used for training.}
 
-\item{ID}{The column name in input data containing unique subject identifiers.}
-
 \item{sexvar}{The column name in the input data containing subject gender coded as "Male" / "Female".}
 
 \item{method}{The name of the method that produces the growth curve fits.}
+
+\item{ID}{The column name in input data containing unique subject identifiers.}
 }
 \value{
 ...

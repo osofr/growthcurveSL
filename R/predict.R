@@ -184,5 +184,7 @@ predict_all <- function(modelfit,
               dplyr::group_by_(ID) %>%
               tidyr::nest(.key = "fit")
 
+  attr(fits_all, "nodes") <- nodes
+
   return(fits_all)
 }

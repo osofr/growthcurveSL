@@ -97,7 +97,7 @@ define_tgrid <- function(dataDT,
                          tmin = 1,
                          tmax = 500,
                          incr = 2) {
-  if (!is.data.table(dataDT)) stop("critical error: dataDT must be a data.table, use 'data.table(dataDT)'")
+  if (!data.table::is.data.table(dataDT)) stop("critical error: dataDT must be a data.table, use 'data.table(dataDT)'")
   if ("train_point" %in% names(dataDT)) stop("critical error: columns named 'train_point' are not allowed in dataDT")
 
   # if (!is.null(hold_column)) {
@@ -207,6 +207,8 @@ define_features_drop <- function(dataDT,
                                  verbose = getOption("growthcurveSL.verbose")) {
   # dataDT <- data.table(dataDT)
   dataDT <- copy(dataDT) # Making sure nothing gets modified by reference:
+  data.table::setkeyv(dataDT, cols = c(ID, t_name))
+
   if (train_set && !missing(hold_column)) {
     # Define which observations are in the hold-out set (and thus should be ignored when creating predictors for training set)
     non_hold_idx <- !dataDT[[hold_column]]

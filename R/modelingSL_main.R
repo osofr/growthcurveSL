@@ -1,7 +1,7 @@
 #' @import R6
 #' @import data.table
 #' @import ggiraph
-#' @import GriDiSL
+#' @import gridisl
 #' @importFrom magrittr %>%
 #' @importFrom graphics axis barplot hist par text  legend plot
 #' @importFrom methods is
@@ -26,7 +26,7 @@ fit_growth <- function(...) { UseMethod("fit_growth") }
 #' V-fold cross-validated MSE which uses entire subjects
 #' (entire growth curves) for model validation (method = "cv").
 #' @param models Parameters specifying the model(s) to fit.
-#' This must be a result of calling \code{GriDiSL::defModel(...) + GriDiSL::defModel(...)} functions.
+#' This must be a result of calling \code{gridisl::defModel(...) + gridisl::defModel(...)} functions.
 #' See \code{\link{defModel}} for additional information.
 #' @param method The type of model selection procedure when fitting several models.
 #' Possible options are "none" (no model selection),
@@ -55,11 +55,11 @@ fit_growth <- function(...) { UseMethod("fit_growth") }
 #' @param refit Set to \code{TRUE} (default) to refit the best estimator using the entire dataset.
 #' When \code{FALSE}, it might be impossible to make predictions from this model fit.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to the console.
-#' Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.
-#' @param ... Additional arguments that will be passed on to \code{GriDiSL::fit_model} function.
+#' Turn this on by default using \code{options(gridisl.verbose=TRUE)}.
+#' @param ... Additional arguments that will be passed on to \code{gridisl::fit_model} function.
 #' @return An R6 object containing the model fit(s).
-# @seealso \code{\link{GriDiSL-package}} for the general overview of the package,
-# @example tests/examples/1_GriDiSL_example.R
+# @seealso \code{\link{gridisl-package}} for the general overview of the package,
+# @example tests/examples/1_gridisl_example.R
 #' @export
 fit_growth.ModelStack <- function(models,
                                   method = c("none", "cv", "holdout"),
@@ -75,7 +75,7 @@ fit_growth.ModelStack <- function(models,
                                   seed = NULL,
                                   use_new_features = FALSE,
                                   refit = TRUE,
-                                  verbose = getOption("GriDiSL.verbose"),
+                                  verbose = getOption("gridisl.verbose"),
                                   ...) {
 
   method <- method[1L]
@@ -115,7 +115,7 @@ fit_growth.ModelStack <- function(models,
 
     ## Fit models based on all available data
     data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
-    modelfit <- GriDiSL::fit_model(ID, t_name, x, y, data, models = models, verbose = verbose, ...)
+    modelfit <- gridisl::fit_model(ID, t_name, x, y, data, models = models, verbose = verbose, ...)
 
   } else if (method %in% "cv") {
 
@@ -137,7 +137,7 @@ fit_growth.ModelStack <- function(models,
       x <- c(x, new_features)
     }
 
-    modelfit <- GriDiSL::fit_model(ID, t_name, x, y, train_data = train_data, models = models, fold_column = fold_column, valid_data = valid_data)
+    modelfit <- gridisl::fit_model(ID, t_name, x, y, train_data = train_data, models = models, fold_column = fold_column, valid_data = valid_data)
     message("...retraining the best model on all data...")
     if (refit) best_fit <- modelfit$refit_best_model(modelfit$OData_train)
 
@@ -165,7 +165,7 @@ fit_growth.ModelStack <- function(models,
     }
 
     ## Perform fitting based on training set (and model scoring based on holdout validation set)
-    modelfit <- GriDiSL::fit_model(ID, t_name, x, y, train_data = train_data, valid_data = valid_data, models = models)
+    modelfit <- gridisl::fit_model(ID, t_name, x, y, train_data = train_data, valid_data = valid_data, models = models)
 
     ## Re-fit the best scored model using all available data
     ## Define training data summaries (using all observations):

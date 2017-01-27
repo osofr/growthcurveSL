@@ -11,13 +11,13 @@ fit_growth(...)
   data, ID, t_name, x, y, nfolds = NULL, fold_column = NULL,
   hold_column = NULL, hold_random = FALSE, seed = NULL,
   use_new_features = FALSE, refit = TRUE,
-  verbose = getOption("GriDiSL.verbose"), ...)
+  verbose = getOption("gridisl.verbose"), ...)
 }
 \arguments{
-\item{...}{Additional arguments that will be passed on to \code{GriDiSL::fit_model} function.}
+\item{...}{Additional arguments that will be passed on to \code{gridisl::fit_model} function.}
 
 \item{models}{Parameters specifying the model(s) to fit.
-This must be a result of calling \code{GriDiSL::defModel(...) + GriDiSL::defModel(...)} functions.
+This must be a result of calling \code{gridisl::defModel(...) + gridisl::defModel(...)} functions.
 See \code{\link{defModel}} for additional information.}
 
 \item{method}{The type of model selection procedure when fitting several models.
@@ -60,7 +60,7 @@ defined inside this function aren't use unless this is set to \code{TRUE}.}
 When \code{FALSE}, it might be impossible to make predictions from this model fit.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to the console.
-Turn this on by default using \code{options(GriDiSL.verbose=TRUE)}.}
+Turn this on by default using \code{options(gridisl.verbose=TRUE)}.}
 }
 \value{
 An R6 object containing the model fit(s).

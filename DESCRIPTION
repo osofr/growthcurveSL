@@ -11,7 +11,7 @@ Imports:
     dplyr,
     data.table,
     ggplot2,
-    GriDiSL,
+    gridisl,
     methods,
     R6,
     rmarkdown,

@@ -1,6 +1,6 @@
 Package: growthcurveSL
 Title: SuperLearner for Imputing Growth Curves
-Version: 0.0.6.9000
+Version: 0.0.7.9000
 Authors@R: c(
     person("Oleg", "Sofrygin", role=c("aut", "cre"), email="oleg.sofrygin@gmail.com"))
 Description: SuperLearner for Imputing Growth Curves.
@@ -8,8 +8,8 @@ Depends:
     R (>= 3.2.1)
 Imports:
     assertthat,
-    dplyr,
     data.table,
+    dplyr,
     ggplot2,
     gridisl,
     methods,
@@ -18,12 +18,9 @@ Imports:
     pander,
     progress,
     purrr,
-    speedglm,
     stats,
-    stringr,
     tibble,
-    tidyr,
-    zoo
+    tidyr
 Suggests:
     brokenstick,
     ggiraph,
@@ -32,7 +29,7 @@ Suggests:
     knitr,
     magrittr,
     RUnit,
-    simcausal
+    xgboost
 License: GPL (>= 2)
 LazyData: true
 RoxygenNote: 5.0.1

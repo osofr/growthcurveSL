@@ -22,14 +22,14 @@ Imports:
     tibble,
     tidyr
 Suggests:
-    brokenstick,
+    brokenstick (>= 0.49),
+    face (>= 0.1-2),
     ggiraph,
     h2o,
-    face,
     knitr,
     magrittr,
     RUnit,
     xgboost
-License: GPL (>= 2)
+License: MIT + file LICENSE
 LazyData: true
 RoxygenNote: 5.0.1

@@ -4,7 +4,7 @@
 \alias{predict_all}
 \title{Obtain all possible predictions with one call}
 \usage{
-predict_all(modelfit, newdata, add_holdout = FALSE, add_grid = FALSE,
+predict_all(modelfit, newdata, add_holdout = TRUE, add_grid = TRUE,
   tmin = NULL, tmax = NULL, incr = 5,
   verbose = getOption("growthcurveSL.verbose"))
 }

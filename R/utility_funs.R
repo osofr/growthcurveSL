@@ -8,31 +8,31 @@ is.PredictionStack <- function(PredictionStack) "PredictionStack"%in%class(Predi
 is.ModelStack <- function(obj) "ModelStack" %in% class(obj)
 
 
-# ---------------------------------------------------------------------------------------
-# Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
-#
-# @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
-# @param ID A character string name of the column that contains the unique subject identifiers.
-# @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
-# @param covars Names of predictors (covariates) in the data.
-# @param OUTCOME Character name of the column containing outcomes.
-# @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
-# @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
-# @example tests/examples/1_growthcurveSL_example.R
-# @export
-importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("growthcurveSL.verbose")) {
-  gvars$verbose <- verbose
+# # ---------------------------------------------------------------------------------------
+# # Import data, define nodes (columns), define dummies for factor columns and define input data R6 object
+# #
+# # @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+# # @param ID A character string name of the column that contains the unique subject identifiers.
+# # @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
+# # @param covars Names of predictors (covariates) in the data.
+# # @param OUTCOME Character name of the column containing outcomes.
+# # @param verbose Set to \code{TRUE} to print messages on status and information to the console. Turn this on by default using \code{options(growthcurveSL.verbose=TRUE)}.
+# # @return An R6 object that contains the input data. This can be passed as an argument to \code{get_fit} function.
+# # @example tests/examples/1_growthcurveSL_example.R
+# # @export
+# importData <- function(data, ID = "Subject_ID", t_name = "time_period", covars, OUTCOME = "Y", verbose = getOption("growthcurveSL.verbose")) {
+#   gvars$verbose <- verbose
 
-  if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
-    covars <- setdiff(colnames(data), c(ID, OUTCOME))
-  }
+#   if (missing(covars)) { # define time-varing covars (L) as everything else in data besides these vars
+#     covars <- setdiff(colnames(data), c(ID, OUTCOME))
+#   }
 
-  nodes <- list(Lnodes = covars, Ynode = OUTCOME, IDnode = ID, tnode = t_name)
-  OData <- DataStorageClass$new(Odata = data, nodes = nodes)
+#   nodes <- list(Lnodes = covars, Ynode = OUTCOME, IDnode = ID, tnode = t_name)
+#   OData <- DataStorageClass$new(Odata = data, nodes = nodes)
 
-  for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
-  return(OData)
-}
+#   for (Lnode in nodes$Lnodes) CheckVarNameExists(OData$dat.sVar, Lnode)
+#   return(OData)
+# }
 
 ## -----------------------------------------------------------------------------
 ## General utilities / Global Vars

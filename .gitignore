@@ -3,6 +3,10 @@
 .RData
 .DS_Store
 inst/doc
+inst/*.html
+inst/*cache
+inst/guide_to_growthcurveSL
+inst/appfiles
 src/*.o
 README.html
 tests/*.pdf

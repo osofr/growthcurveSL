@@ -117,7 +117,7 @@ predict_all <- function(modelfit,
                         tmax = NULL,
                         incr = 5,
                         add_checkpoint = TRUE,
-                        checkpoint = c(1, hbgd::months2days(1:24)),
+                        checkpoint = as.integer(c(1, hbgd::months2days(1:24))),
                         verbose = getOption("growthcurveSL.verbose")) {
 
   nodes <- modelfit$OData_train$nodes
@@ -160,7 +160,6 @@ predict_all <- function(modelfit,
                   dplyr::rename_("x" = t_name) %>%
                   dplyr::group_by_(ID)
 
-
   if (add_grid || add_checkpoint)
     train_dat <- define_features_drop(newdata, ID =  ID, t_name = t_name, y = y, train_set = TRUE)
 
@@ -176,13 +175,20 @@ predict_all <- function(modelfit,
 
   ## Predictions for checkpoint (essentially the same thing as grid, but with different spacings):
   if (add_checkpoint) {
+    checkpoint <- as.integer(checkpoint)
     chckpt_dat <- define_tgrid(train_dat, ID = ID, t_name = t_name, y = y, tgrid = checkpoint)
-    preds_chckpt <- predict_growth(modelfit, newdata = chckpt_dat, grid = TRUE, add_subject_data = FALSE)
+    preds_chckpt <- predict_growth(modelfit, newdata = chckpt_dat, grid = TRUE, add_subject_data = TRUE)
   }
-  chckpt_bysubj <- unique_subj %>%
+  merge_into_dat <- CJ(unique_subj[[1]], checkpoint)
+  setnames(merge_into_dat,c(ID,t_name))
+  chckpt_bysubj <- merge_into_dat %>%
                    dplyr::left_join(preds_chckpt) %>%
                    dplyr::rename_("x" = t_name) %>%
                    dplyr::group_by_(ID)
+  # chckpt_bysubj <- unique_subj %>%
+  #                  dplyr::left_join(preds_chckpt) %>%
+  #                  dplyr::rename_("x" = t_name) %>%
+  #                  dplyr::group_by_(ID)
 
   ## Generate data with one row per subj ID
   ## nest each prediction dataset type in its respective list-column

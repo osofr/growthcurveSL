@@ -151,11 +151,9 @@ add_cogs_persubj <- function(fit_dat, sex,
                 dplyr::mutate(y = fun_y_to_raw(x, preds, sex = sex)) %>%
                 dplyr::mutate(z = fun_y_to_z(x, preds, sex = sex)) %>%
                 dplyr::select_("x", "y", "z")
-
     ## add derivative on original and z-score scale
     if (!is.null(fitgrid$y)) fitgrid$dy <- hbgd::grid_deriv(fitgrid$x, fitgrid$y)
     if (!is.null(fitgrid$z)) fitgrid$dz <- hbgd::grid_deriv(fitgrid$x, fitgrid$z)
-
     res[["fitgrid"]] <- fitgrid
 
     res[["holdout"]] <- fit_dat %>%
@@ -164,8 +162,14 @@ add_cogs_persubj <- function(fit_dat, sex,
                 dplyr::mutate(z = fun_y_to_z(x, preds, sex = sex)) %>%
                 dplyr::select_("x", "y", "z")
 
-    # checkpoint <- data.frame(x = checkpoints, y = NA, z = NA, zcat = NA)
-    res[["checkpoint"]] <- data.frame(x = checkpoints, y = NA, z = NA, zcat = NA)
+    res[["checkpoint"]] <- fit_dat %>%
+                tidyr::unnest(checkpoint) %>%
+                dplyr::mutate(y = fun_y_to_raw(x, preds, sex = sex)) %>%
+                dplyr::mutate(z = fun_y_to_z(x, preds, sex = sex)) %>%
+                dplyr::select_("x", "y", "z") %>%
+                dplyr::mutate(zcat = NA)
+    # res[["checkpoint"]] <- data.frame(x = checkpoints, y = NA, z = NA, zcat = NA)
+    # res[["checkpoint"]] <- checkpoint
 
     # a z-score categorization (e.g. <-2 or >-2) for where the subject’s growth falls in the z-score scale at each checkpoint
     res[["zcat"]] <- NA

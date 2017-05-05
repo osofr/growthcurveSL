@@ -13,6 +13,44 @@
 # @importFrom ggiraph geom_point_interactive ggiraph
 NULL
 
+# -----------------------------------------------------------------------------------------------
+#' Wrapper for growthcurve SL function calls.
+#'
+#' Predefine a wrapper for model fitting.
+#' This function returns a function that takes in two arguments: \code{models} and \code{x}.
+#' See the arguments \code{models} and \code{x} in \code{fit_growth} function for additional details.
+#' @param method The type of model selection procedure when fitting several models.
+#' Possible options are "none" (no model selection),
+#' "cv" (model selection with V-fold cross-validation), and
+#' "holdout" (model selection based on validation holdout sample).
+#' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
+#' @param ID A character string name of the column that contains the unique subject identifiers.
+#' @param t_name A character string name of the column with integer-valued measurement time-points
+#' (in days, weeks, months, etc).
+#' @param y A character string name of the column that represent the response variable in the model.
+#' @param nfolds Number of folds to use in cross-validation.
+#' @param fold_column The name of the column in the input data that contains the cross-validation
+#' fold indicators (must be an ordered factor).
+#' @param hold_column The name of the column that contains the holdout observation indicators
+#' (TRUE/FALSE) in the input data.
+#' This holdout column must be defined and added to the input data prior to calling this function.
+#' @param hold_random Logical, specifying if the holdout observations should be selected at random.
+#' If FALSE then the last observation for each subject is selected as a holdout.
+#' @export
+SLfit_wrapper <- function(method, fold_column = NULL, hold_column = NULL, data, ID, t_name, y) {
+  return(function(models, x) fit_growth(models = models,
+                                         data = data,
+                                         method = method,
+                                         ID = ID,
+                                         t_name = t_name,
+                                         x = x,
+                                         y = y,
+                                         fold_column = fold_column,
+                                         hold_column = hold_column,
+                                         use_new_features = TRUE)
+        )
+}
+
 #' @rdname fit_growth.ModelStack
 #' @export
 fit_growth <- function(...) { UseMethod("fit_growth") }

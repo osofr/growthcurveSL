@@ -96,6 +96,9 @@ predict_growth <- function(modelfit,
 #' @param tmax Max t value for predicting the entire growth curve.
 #' By default the highest observed value in \code{newdata} is used.
 #' @param incr Increment time variable value for predicting the entire growth curve.
+#' @param add_checkpoint Set to \code{TRUE} (default) to obtain predictions for pre-specified x checkpoint
+#' (essentially the same thing as grid, but with potentially different spacings).
+#' @param checkpoint The grid of checkpoint for which to obtain predictions (daily resolution).
 #' @param verbose Set to \code{TRUE} to print messages on status and information to
 #' the console.
 #' @return A data.frame with one row per subject.
@@ -113,6 +116,8 @@ predict_all <- function(modelfit,
                         tmin = NULL,
                         tmax = NULL,
                         incr = 5,
+                        add_checkpoint = TRUE,
+                        checkpoint = c(1, hbgd::months2days(1:24)),
                         verbose = getOption("growthcurveSL.verbose")) {
 
   nodes <- modelfit$OData_train$nodes
@@ -128,7 +133,7 @@ predict_all <- function(modelfit,
                         stringsAsFactors=FALSE) %>%
               data.table::data.table()
 
-  preds_holdout <- preds_grid <- empty_df
+  preds_holdout <- preds_grid <- preds_chckpt <- empty_df
 
   ## Generate data with all unique subject IDs that appear in input training data
   unique_subj <- newdata %>%
@@ -136,9 +141,8 @@ predict_all <- function(modelfit,
 
   ## Predictions for new data based on best SL model trained on all data:
   preds_alldat <- predict_growth(modelfit, newdata = newdata, add_subject_data = TRUE)
-
   ## Create a dataset with (ID, time, outcome, prediction) column
-  fit_bysujb <- newdata %>%
+  fit_bysubj <- newdata %>%
                 dplyr::rename_("x" = t_name, "y" = y) %>%
                 dplyr::select_(ID, "x", "y") %>%
                 dplyr::group_by_(ID) %>%
@@ -151,34 +155,47 @@ predict_all <- function(modelfit,
   ## Predictions for all holdout data points for all models trained on non-holdout data:
   if (add_holdout)
     preds_holdout <- predict_growth(modelfit, holdout = TRUE, add_subject_data = TRUE)
-
-  hold_bysujb <-  unique_subj %>%
+  hold_bysubj <-  unique_subj %>%
                   dplyr::left_join(preds_holdout) %>%
                   dplyr::rename_("x" = t_name) %>%
                   dplyr::group_by_(ID)
 
-  ## Predictions for a grid of equally spaced time points
-  if (add_grid) {
+
+  if (add_grid || add_checkpoint)
     train_dat <- define_features_drop(newdata, ID =  ID, t_name = t_name, y = y, train_set = TRUE)
+
+  ## Predictions for a grid of equally spaced time points:
+  if (add_grid) {
     grid_dat <- define_tgrid(train_dat, ID = ID, t_name = t_name, y = y, tmin = tmin, tmax = tmax, incr = incr)
     preds_grid <- predict_growth(modelfit, newdata = grid_dat, grid = TRUE, add_subject_data = TRUE)
   }
-
-  fitgrid_bysujb <- unique_subj %>%
+  fitgrid_bysubj <- unique_subj %>%
                     dplyr::left_join(preds_grid) %>%
                     dplyr::rename_("x" = t_name) %>%
                     dplyr::group_by_(ID)
 
+  ## Predictions for checkpoint (essentially the same thing as grid, but with different spacings):
+  if (add_checkpoint) {
+    chckpt_dat <- define_tgrid(train_dat, ID = ID, t_name = t_name, y = y, tgrid = checkpoint)
+    preds_chckpt <- predict_growth(modelfit, newdata = chckpt_dat, grid = TRUE, add_subject_data = TRUE)
+  }
+  chckpt_bysubj <- unique_subj %>%
+                   dplyr::left_join(preds_chckpt) %>%
+                   dplyr::rename_("x" = t_name) %>%
+                   dplyr::group_by_(ID)
+
   ## Generate data with one row per subj ID
   ## nest each prediction dataset type in its respective list-column
-  fit_bysujb <- fit_bysujb %>% tidyr::nest(.key = "fit")
-  hold_bysujb <- hold_bysujb %>% tidyr::nest(.key = "holdout")
-  fitgrid_bysujb <- fitgrid_bysujb %>% tidyr::nest(.key = "fitgrid")
+  fit_bysubj <- fit_bysubj %>% tidyr::nest(.key = "fit")
+  hold_bysubj <- hold_bysubj %>% tidyr::nest(.key = "holdout")
+  fitgrid_bysubj <- fitgrid_bysubj %>% tidyr::nest(.key = "fitgrid")
+  chckpt_bysubj <- chckpt_bysubj %>% tidyr::nest(.key = "checkpoint")
 
-  ## combine all 3 datasets by subject:
-  fits_all <- fit_bysujb %>%
-              dplyr::left_join(hold_bysujb) %>%
-              dplyr::left_join(fitgrid_bysujb)
+  ## combine all 4 datasets by subject:
+  fits_all <- fit_bysubj %>%
+              dplyr::left_join(hold_bysubj) %>%
+              dplyr::left_join(fitgrid_bysubj) %>%
+              dplyr::left_join(chckpt_bysubj)
 
   fits_all <- fits_all %>%
               dplyr::group_by_(ID) %>%

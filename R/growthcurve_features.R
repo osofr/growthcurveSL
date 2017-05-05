@@ -82,7 +82,7 @@ predict_save_tgrid <- function(SLfit,
 #' @param tmin Min t value of the grid
 #' @param tmax Max t value of the grid
 #' @param incr Increment value for the grid of \code{t}'s
-# @param hold_column Column name in \code{dataDT} indicating the holdout observations (if used).
+#' @param tgrid Specify the grid of daily time-points directly (will ignore \code{tmin}, \code{tmax} and \code{incr})
 #' @return A \code{data.table} of subject IDs and time-points, along with all the relevant subject specific curve summaries and predictors.
 #' In addition, the output dataset also contains an indicator column 'train_point', set to \code{TRUE} for all (ID,time-points) that also appear
 #' in the input data \code{dataDT}. That is 'train_point' indicates if the row might have been previously used for model training.
@@ -96,7 +96,8 @@ define_tgrid <- function(dataDT,
                          y,
                          tmin = 1,
                          tmax = 500,
-                         incr = 2) {
+                         incr = 2,
+                         tgrid) {
   if (!data.table::is.data.table(dataDT)) stop("critical error: dataDT must be a data.table, use 'data.table(dataDT)'")
   if ("train_point" %in% names(dataDT)) stop("critical error: columns named 'train_point' are not allowed in dataDT")
 
@@ -105,8 +106,9 @@ define_tgrid <- function(dataDT,
   # }
 
   ## 1. Define the grid of time-points for which to predict
-  t_grid <- seq(tmin, tmax, by = incr)
-  gridDT <- CJ(unique(dataDT[[ID]]), as.integer(t_grid))
+  if (missing(tgrid)) tgrid <- seq(tmin, tmax, by = incr)
+
+  gridDT <- CJ(unique(dataDT[[ID]]), as.integer(tgrid))
   colnames(gridDT) <- c(ID, t_name)
   setkeyv(gridDT, cols = c(ID, t_name))
 

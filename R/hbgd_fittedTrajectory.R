@@ -105,7 +105,6 @@ convert_to_hbgd <- function(fit_dat_all, data, sexvar = "sex", method = "default
     fit_dat_hbgd
 }
 
-
 #' Create a fittedTrajectory object with fits for a single subject
 #'
 #' Creates objects of class \code{fittedTrajectory} with growth curve predictions, one object for subject ID in the data.
@@ -127,8 +126,9 @@ convert_to_hbgd <- function(fit_dat_all, data, sexvar = "sex", method = "default
 add_cogs_persubj <- function(fit_dat, sex,
                              method = "default",
                              xy_pair_name = c("agedays","htcm"),
-                             checkpoints = c(50, 100),
-                             fun_y_to_raw = who_zscore2htcm, # fun_y_to_raw = hbgd::who_zscore2htcm,
+                             # checkpoints = c(1, hbgd::months2days(1:24)),
+                             fun_y_to_raw = who_zscore2htcm,
+                             # fun_y_to_raw = hbgd::who_zscore2htcm,
                              fun_y_to_z = function(x, y, ...) return(y)) {
 
     res <- list()

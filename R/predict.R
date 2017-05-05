@@ -177,7 +177,7 @@ predict_all <- function(modelfit,
   ## Predictions for checkpoint (essentially the same thing as grid, but with different spacings):
   if (add_checkpoint) {
     chckpt_dat <- define_tgrid(train_dat, ID = ID, t_name = t_name, y = y, tgrid = checkpoint)
-    preds_chckpt <- predict_growth(modelfit, newdata = chckpt_dat, grid = TRUE, add_subject_data = TRUE)
+    preds_chckpt <- predict_growth(modelfit, newdata = chckpt_dat, grid = TRUE, add_subject_data = FALSE)
   }
   chckpt_bysubj <- unique_subj %>%
                    dplyr::left_join(preds_chckpt) %>%

@@ -85,17 +85,22 @@ who_zscore2htcm <- function(agedays, z = 0, sex = "Female") {
 #' @param method The name of the method that produces the growth curve fits.
 #' @return ...
 #' @export
-convert_to_hbgd <- function(fit_dat_all, data, sexvar = "SEX", method = "default") {
+convert_to_hbgd <- function(fit_dat_all, data, sexvar = "sex", method = "default") {
     nodes <- attr(fit_dat_all, "nodes")
     ID <- nodes$IDnode
 
     fit_dat_hbgd <- data %>%
-        dplyr::distinct_(ID, sexvar) %>%
-        dplyr::rename_("sex" = sexvar) %>%
-        dplyr::left_join(fit_dat_all) %>%
-        tibble::as_tibble() %>%
-        plyr::mutate(fit = purrr::map2(fit, sex,
-            ~ add_cogs_persubj(fit_dat = .x, sex = .y, method = method)))
+      dplyr::distinct_(ID, sexvar) %>%
+      dplyr::rename_("sex" = sexvar)
+
+    if (is.integerish(fit_dat_hbgd[["sex"]]))
+      fit_dat_hbgd[["sex"]] <- as.integer(fit_dat_hbgd[["sex"]]) %>% dplyr::recode(`0` = "Female", `1` = "Male")
+
+    fit_dat_hbgd <- fit_dat_hbgd %>%
+      dplyr::left_join(fit_dat_all) %>%
+      tibble::as_tibble() %>%
+      plyr::mutate(fit = purrr::map2(fit, sex,
+          ~ add_cogs_persubj(fit_dat = .x, sex = .y, method = method)))
 
     fit_dat_hbgd
 }

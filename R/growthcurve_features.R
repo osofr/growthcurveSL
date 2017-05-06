@@ -79,10 +79,13 @@ predict_save_tgrid <- function(SLfit,
 #' @param ID A character string name of the column that contains the unique subject identifiers.
 #' @param t_name A character string name of the column with integer-valued measurement time-points (in days, weeks, months, etc).
 #' @param y A character string name of the column that represent the response variable in the model.
-#' @param tmin Min t value of the grid
-#' @param tmax Max t value of the grid
-#' @param incr Increment value for the grid of \code{t}'s
-#' @param tgrid Specify the grid of daily time-points directly (will ignore \code{tmin}, \code{tmax} and \code{incr})
+# @param tmin Min t value of the grid
+# @param tmax Max t value of the grid
+# @param incr Increment value for the grid of \code{t}'s
+#' @param tgrid Specify the grid of time-points directly.
+#' If missing a subject-specific grid is defined based on the subject's follow-up range.
+#' @param grid_size How many time-points should be used in equally spaced grid?
+#' This argument is only used when \code{tgrid} is missing.
 #' @return A \code{data.table} of subject IDs and time-points, along with all the relevant subject specific curve summaries and predictors.
 #' In addition, the output dataset also contains an indicator column 'train_point', set to \code{TRUE} for all (ID,time-points) that also appear
 #' in the input data \code{dataDT}. That is 'train_point' indicates if the row might have been previously used for model training.
@@ -94,10 +97,11 @@ define_tgrid <- function(dataDT,
                          ID,
                          t_name,
                          y,
-                         tmin = 1,
-                         tmax = 500,
-                         incr = 2,
-                         tgrid) {
+                         # tmin = 1,
+                         # tmax = 500,
+                         # incr = 5,
+                         tgrid,
+                         grid_size = 150) {
   if (!data.table::is.data.table(dataDT)) stop("critical error: dataDT must be a data.table, use 'data.table(dataDT)'")
   if ("train_point" %in% names(dataDT)) stop("critical error: columns named 'train_point' are not allowed in dataDT")
 
@@ -105,15 +109,31 @@ define_tgrid <- function(dataDT,
   #   if (!(hold_column %in% names(dataDT))) stop("critical error: hold_column is not null, but cannot find the corresponding column name in dataDT")
   # }
 
-  ## 1. Define the grid of time-points for which to predict
-  if (missing(tgrid)) tgrid <- seq(tmin, tmax, by = incr)
+  ## 1A. Define the grid of time-points for which to predict (common grid for all subjects)
+  # if (missing(tgrid))
+  #   tgrid <- seq(tmin, tmax, by = incr)
+  # gridDT <- CJ(unique(dataDT[[ID]]), as.integer(tgrid))
 
-  gridDT <- CJ(unique(dataDT[[ID]]), as.integer(tgrid))
+  ## 1B. Define subject-specific grid of time-points based on the subject's observed t range (e.g, 150 equally spaced time-points)
+  if (missing(tgrid)) {
+    gridDT <- dataDT[,
+      {
+       xrng <- range(agedays, na.rm = TRUE);
+       as.integer(seq(xrng[1], xrng[2], length = grid_size))
+     }, by = eval(ID)]
+  } else {
+    gridDT <- CJ(unique(dataDT[[ID]]), as.integer(tgrid))
+  }
+
   colnames(gridDT) <- c(ID, t_name)
   setkeyv(gridDT, cols = c(ID, t_name))
 
   ## 2. Remove person-time combos that already appear in input data (will be later added w/ rbind)
   gridDT <- fsetdiff(gridDT, dataDT[, c(ID, t_name), with = FALSE])
+  # gridDT[subjid == 500, ]
+  # dataDT[, .N,by=subjid][N==1, ]
+  # gridDT[subjid == 3,]
+
   gridDT[, ("train_point") :=  FALSE] # indicator that this row hasn't been used for training
   # if (!is.null(hold_column)) gridDT[, (hold_column) :=  FALSE]
 
@@ -142,7 +162,7 @@ define_tgrid <- function(dataDT,
   setkeyv(gridDT, cols = c(ID))
   gridDT <- merge(gridDT, dataDT_ID_bsl)
 
-  ## TV covars? Apply last observation carried forward approach. TBD.
+  ## TV covars? Apply last observation carried forward approach, merge above did just that.
     # TDvars <- c()        # time-dep covars
     # setkeyv(dataDT, cols = c(ID, t_name))
     # gridDT <- dataDT[, , with = FALSE][gridDT, roll = Inf]

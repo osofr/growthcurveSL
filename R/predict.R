@@ -91,11 +91,15 @@ predict_growth <- function(modelfit,
 #' used for scoring the current best model fit.
 #' @param add_grid Optional flag, set to \code{TRUE} to add a grid of equally spaced
 #' predictions over some range of the time variable for the current best model fit.
-#' @param tmin Min t value for predicting the entire growth curve.
-#' By default the lowest observed value in \code{newdata} is used.
-#' @param tmax Max t value for predicting the entire growth curve.
-#' By default the highest observed value in \code{newdata} is used.
-#' @param incr Increment time variable value for predicting the entire growth curve.
+#' @param tgrid Specify the grid of time-points directly.
+#' If missing a subject-specific grid is defined based on the subject's follow-up range.
+#' @param grid_size How many time-points should be used in equally spaced grid?
+#' This argument is only used when \code{tgrid} is missing.
+# @param tmin Min t value for predicting the entire growth curve.
+# By default the lowest observed value in \code{newdata} is used.
+# @param tmax Max t value for predicting the entire growth curve.
+# By default the highest observed value in \code{newdata} is used.
+# @param incr Increment time variable value for predicting the entire growth curve.
 #' @param add_checkpoint Set to \code{TRUE} (default) to obtain predictions for pre-specified x checkpoint
 #' (essentially the same thing as grid, but with potentially different spacings).
 #' @param checkpoint The grid of checkpoint for which to obtain predictions (daily resolution).
@@ -113,9 +117,11 @@ predict_all <- function(modelfit,
                         newdata,
                         add_holdout = TRUE,
                         add_grid = TRUE,
-                        tmin = NULL,
-                        tmax = NULL,
-                        incr = 5,
+                        # tmin = NULL,
+                        # tmax = NULL,
+                        # incr = 5,
+                        tgrid,
+                        grid_size = 150,
                         add_checkpoint = TRUE,
                         checkpoint = as.integer(c(1, hbgd::months2days(1:24))),
                         verbose = getOption("growthcurveSL.verbose")) {
@@ -125,8 +131,8 @@ predict_all <- function(modelfit,
   t_name <- nodes$tnode
   y <- nodes$Ynode
 
-  if (is.null(tmin)) tmin <- min(newdata[[t_name]])
-  if (is.null(tmax)) tmax <- max(newdata[[t_name]])
+  # if (is.null(tmin)) tmin <- min(newdata[[t_name]])
+  # if (is.null(tmax)) tmax <- max(newdata[[t_name]])
 
   empty_df = data.frame(matrix(vector(), 0, 3,
                         dimnames=list(c(), c(ID, t_name, "preds"))),
@@ -165,7 +171,8 @@ predict_all <- function(modelfit,
 
   ## Predictions for a grid of equally spaced time points:
   if (add_grid) {
-    grid_dat <- define_tgrid(train_dat, ID = ID, t_name = t_name, y = y, tmin = tmin, tmax = tmax, incr = incr)
+    grid_dat <- define_tgrid(train_dat, ID = ID, t_name = t_name, y = y, tgrid, grid_size)
+    # tmin = tmin, tmax = tmax, incr = incr
     preds_grid <- predict_growth(modelfit, newdata = grid_dat, grid = TRUE, add_subject_data = TRUE)
   }
   fitgrid_bysubj <- unique_subj %>%

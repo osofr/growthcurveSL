@@ -182,10 +182,18 @@ convert_to_hbgd <- function(fit_dat_all, data, sexvar = "sex", method = "default
     if (is.integerish(fit_dat_hbgd[["sex"]]))
       fit_dat_hbgd[["sex"]] <- as.integer(fit_dat_hbgd[["sex"]]) %>% dplyr::recode(`0` = "Female", `1` = "Male")
 
+
+
     fit_dat_hbgd <-
       fit_dat_hbgd %>%
       dplyr::left_join(fit_dat_all) %>%
       tibble::as_tibble()
+
+    # MSE <-
+    #   fit_dat_hbgd %>%
+    #   tidyr::unnest(fit) %>%
+    #   dplyr::select_(ID, "MSE") %>%
+    #   tidyr::nest(-subjid, .key = MSE)
 
     xy <-
       fit_dat_hbgd %>%
@@ -199,11 +207,6 @@ convert_to_hbgd <- function(fit_dat_all, data, sexvar = "sex", method = "default
       dplyr::mutate(zfit = fun_y_to_z(x, preds, sex = sex)) %>%
       dplyr::select_(ID, "x", "y", "z", "yfit", "zfit") %>%
       tidyr::nest(-subjid, .key = xy)
-      #  %>%
-      # dplyr::mutate(xy = purrr::map(xy, ~.x[1]))
-      # dplyr::mutate(xy = purrr::map(xy, function(x) {browser(); unlist(x)}))
-    # xy[["xy"]]
-    # xy[1, "xy"][[1]][[1]]
 
     ## the residuals of the fit
     resid <-
@@ -257,7 +260,8 @@ convert_to_hbgd <- function(fit_dat_all, data, sexvar = "sex", method = "default
 
     fit_dat_hbgd_fast <-
       fit_dat_hbgd %>%
-      select(subjid, sex) %>%
+      dplyr::select(subjid, sex) %>%
+      dplyr::left_join(fit_dat_all %>% tidyr::unnest(fit) %>% dplyr::select_(ID, "MSE")) %>%
       dplyr::left_join(xy) %>%
       dplyr::left_join(resid) %>%
       dplyr::left_join(fitgrid) %>%
@@ -268,15 +272,20 @@ convert_to_hbgd <- function(fit_dat_all, data, sexvar = "sex", method = "default
       dplyr::mutate(fit = purrr::map(fit, function(res) {
         # browser();
         res <- list(
-          xy = res[["xy"]][[1]], resid = res[["resid"]][[1]], holdout = res[["holdout"]][[1]], checkpoint = res[["checkpoint"]][[1]], zcat = res[["zcat"]],
+          xy = res[["xy"]][[1]], resid = res[["resid"]][[1]], holdout = res[["holdout"]][[1]], checkpoint = res[["checkpoint"]][[1]],
+          zcat = res[["zcat"]],
+          MSE = res[["MSE"]],
           pars = res[["pars"]], x_var = res[["x_var"]], y_var = res[["y_var"]], method = res[["method"]], sex = res[["sex"]]
           )
         class(res) <- "fittedTrajectory";
         res}))
 
+    # fit_dat_hbgd_fast[2, "fit"][["fit"]]
+
+    fit_dat_hbgd_fast
+
     # fit_dat_hbgd[1:10, ][["fit"]]
     # fit_dat_hbgd_fast[["fit"]]
-    fit_dat_hbgd_fast
     # fit_dat_hbgd_fast[1, ][["fit"]]
 
     # fit_dat_hbgd_slow <-

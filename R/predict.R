@@ -103,6 +103,7 @@ predict_growth <- function(modelfit,
 #' @param add_checkpoint Set to \code{TRUE} (default) to obtain predictions for pre-specified x checkpoint
 #' (essentially the same thing as grid, but with potentially different spacings).
 #' @param checkpoint The grid of checkpoint for which to obtain predictions (daily resolution).
+#' @param add_MSE Add subject-specific MSE for growth curve prediction (NOT IMPLEMENTED).
 #' @param verbose Set to \code{TRUE} to print messages on status and information to
 #' the console.
 #' @return A data.frame with one row per subject.
@@ -124,6 +125,7 @@ predict_all <- function(modelfit,
                         grid_size = 150,
                         add_checkpoint = TRUE,
                         checkpoint = as.integer(c(1, hbgd::months2days(1:24))),
+                        add_MSE = TRUE,
                         verbose = getOption("growthcurveSL.verbose")) {
 
   nodes <- modelfit$OData_train$nodes
@@ -192,10 +194,6 @@ predict_all <- function(modelfit,
                    dplyr::left_join(preds_chckpt) %>%
                    dplyr::rename_("x" = t_name) %>%
                    dplyr::group_by_(ID)
-  # chckpt_bysubj <- unique_subj %>%
-  #                  dplyr::left_join(preds_chckpt) %>%
-  #                  dplyr::rename_("x" = t_name) %>%
-  #                  dplyr::group_by_(ID)
 
   ## Generate data with one row per subj ID
   ## nest each prediction dataset type in its respective list-column
@@ -209,6 +207,11 @@ predict_all <- function(modelfit,
               dplyr::left_join(hold_bysubj) %>%
               dplyr::left_join(fitgrid_bysubj) %>%
               dplyr::left_join(chckpt_bysubj)
+
+  if (add_MSE) {
+    subj_MSE <- modelfit$getMSE_bysubj
+    fits_all <- fits_all %>% dplyr::left_join(subj_MSE)
+  }
 
   fits_all <- fits_all %>%
               dplyr::group_by_(ID) %>%

@@ -272,7 +272,11 @@ convert_to_hbgd <- function(fit_dat_all, data, sexvar = "sex", method = "default
       dplyr::mutate(fit = purrr::map(fit, function(res) {
         # browser();
         res <- list(
-          xy = res[["xy"]][[1]], resid = res[["resid"]][[1]], holdout = res[["holdout"]][[1]], checkpoint = res[["checkpoint"]][[1]],
+          xy = res[["xy"]][[1]],
+          resid = res[["resid"]][[1]],
+          fitgrid = res[["fitgrid"]][[1]],
+          holdout = res[["holdout"]][[1]],
+          checkpoint = res[["checkpoint"]][[1]],
           zcat = res[["zcat"]],
           MSE = res[["MSE"]],
           pars = res[["pars"]], x_var = res[["x_var"]], y_var = res[["y_var"]], method = res[["method"]], sex = res[["sex"]]

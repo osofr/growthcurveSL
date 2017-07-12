@@ -5,9 +5,8 @@
 \title{Create a fittedTrajectory object with fits for a single subject}
 \usage{
 add_cogs_persubj(fit_dat, sex, method = "default",
-  xy_pair_name = c("agedays", "htcm"), checkpoints = c(50, 100),
-  fun_y_to_raw = who_zscore2htcm, fun_y_to_z = function(x, y, ...)
-  return(y))
+  xy_pair_name = c("agedays", "htcm"), fun_y_to_raw = who_zscore2htcm,
+  fun_y_to_z = function(x, y, ...) return(y))
 }
 \arguments{
 \item{fit_dat}{Subject specific data to be added to the final object.
@@ -35,4 +34,3 @@ Creates objects of class \code{fittedTrajectory} with growth curve predictions, 
 This can be used for further growth curve analysis with hbgd R package.
 Requires the the dataset containing the predicted growth curves for all subjects \code{grid_fits_dat}.
 }
-

@@ -136,8 +136,8 @@ fit_growth.ModelStack <- function(models,
   }
 
   if (!is.ModelStack(models)) stop("argument models must be of class 'ModelStack'")
-  if (!(method %in% c("none", "cv", "holdout")))
-    stop("argument method must be one of: 'none', 'cv', 'holdout'")
+  if (!(method %in% c("none", "cv", "holdout", "holdout_cv")))
+    stop("argument method must be one of: 'none', 'cv', 'holdout', 'holdout_cv'")
   if (!data.table::is.data.table(data) && !is.DataStorageClass(data))
     stop("argument data must be of class 'data.table, please convert the existing data.frame to data.table by calling 'data.table::as.data.table(...)'")
 
@@ -155,7 +155,7 @@ fit_growth.ModelStack <- function(models,
     data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
     modelfit <- gridisl::fit_model(ID, t_name, x, y, data, models = models, verbose = verbose, ...)
 
-  } else if (method %in% "cv") {
+  } else if (method %in% c("cv","holdout_cv")) {
 
     if (is.null(fold_column)) {
       fold_column <- "fold"
@@ -165,9 +165,22 @@ fit_growth.ModelStack <- function(models,
     ## Define training data summaries (using all observations):
     fun_train_cv <- feature_data_cv(ID, t_name, y, train_set = TRUE)
     train_data <- fun_train_cv(data)
-    ## Define validation data to be used for scoring during CV (each summary row (X_i,Y_i) is created by first dropping this row):
-    fun_valid_cv <- feature_data_cv(ID, t_name, y, train_set = FALSE)
-    valid_data <- fun_valid_cv(data)
+
+    if (method %in% "cv") {
+      ## Define validation data to be used for scoring during CV (each summary row (X_i,Y_i) is created by first dropping this row):
+      fun_valid_cv <- feature_data_cv(ID, t_name, y, train_set = FALSE)
+      valid_data <- fun_valid_cv(data)
+    } else  if (method %in% "holdout_cv") {
+      if (is.null(hold_column)) {
+        hold_column <- "hold"
+        message("...selecting holdout observations...")
+        data <- add_holdout_ind(data, ID, hold_column = hold_column, random = hold_random, seed = seed)
+      }
+      ## Define validation data (includes the holdout only, each summary is created without the holdout observation):
+      ## by giving the hold_column the non-holdout observations will be automatically dropped (could have also done it manually)
+      fun_valid <- feature_data_holdout(ID, t_name, y, train_set = FALSE, hold_column = hold_column)
+      valid_data <- fun_valid(data = data)
+    }
 
     ## Add new features as predictors?
     if (use_new_features) {
@@ -180,7 +193,7 @@ fit_growth.ModelStack <- function(models,
     if (refit) best_fit <- modelfit$refit_best_model(modelfit$OData_train)
 
   } else if (method %in% "holdout") {
-
+    browser()
     if (is.null(hold_column)) {
       hold_column <- "hold"
       message("...selecting holdout observations...")

@@ -27,4 +27,3 @@ growthcurveSLOptions('fit.package', 'h2o')
 \seealso{
 \code{\link{set_all_growthcurveSL_options}}
 }
-

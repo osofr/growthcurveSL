@@ -4,7 +4,7 @@
 \alias{define_tgrid}
 \title{Define data with grids of time-points for growth curve prediction}
 \usage{
-define_tgrid(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2)
+define_tgrid(dataDT, ID, t_name, y, tgrid, grid_size = 150)
 }
 \arguments{
 \item{dataDT}{Input data with all the relevant summaries that were used for modeling being already defined.}
@@ -15,11 +15,11 @@ define_tgrid(dataDT, ID, t_name, y, tmin = 1, tmax = 500, incr = 2)
 
 \item{y}{A character string name of the column that represent the response variable in the model.}
 
-\item{tmin}{Min t value of the grid}
+\item{tgrid}{Specify the grid of time-points directly.
+If missing a subject-specific grid is defined based on the subject's follow-up range.}
 
-\item{tmax}{Max t value of the grid}
-
-\item{incr}{Increment value for the grid of \code{t}'s}
+\item{grid_size}{How many time-points should be used in equally spaced grid?
+This argument is only used when \code{tgrid} is missing.}
 }
 \value{
 A \code{data.table} of subject IDs and time-points, along with all the relevant subject specific curve summaries and predictors.
@@ -29,4 +29,3 @@ in the input data \code{dataDT}. That is 'train_point' indicates if the row migh
 \description{
 Define data with grids of time-points for growth curve prediction
 }
-

@@ -4,8 +4,9 @@
 \alias{predict_all}
 \title{Obtain all possible predictions with one call}
 \usage{
-predict_all(modelfit, newdata, add_holdout = TRUE, add_grid = TRUE,
-  tmin = NULL, tmax = NULL, incr = 5,
+predict_all(modelfit, newdata, add_holdout = TRUE, add_grid = TRUE, tgrid,
+  grid_size = 150, add_checkpoint = TRUE, checkpoint = as.integer(c(1,
+  hbgd::months2days(1:24))), add_MSE = TRUE,
   verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
@@ -19,13 +20,18 @@ used for scoring the current best model fit.}
 \item{add_grid}{Optional flag, set to \code{TRUE} to add a grid of equally spaced
 predictions over some range of the time variable for the current best model fit.}
 
-\item{tmin}{Min t value for predicting the entire growth curve.
-By default the lowest observed value in \code{newdata} is used.}
+\item{tgrid}{Specify the grid of time-points directly.
+If missing a subject-specific grid is defined based on the subject's follow-up range.}
 
-\item{tmax}{Max t value for predicting the entire growth curve.
-By default the highest observed value in \code{newdata} is used.}
+\item{grid_size}{How many time-points should be used in equally spaced grid?
+This argument is only used when \code{tgrid} is missing.}
 
-\item{incr}{Increment time variable value for predicting the entire growth curve.}
+\item{add_checkpoint}{Set to \code{TRUE} (default) to obtain predictions for pre-specified x checkpoint
+(essentially the same thing as grid, but with potentially different spacings).}
+
+\item{checkpoint}{The grid of checkpoint for which to obtain predictions (daily resolution).}
+
+\item{add_MSE}{Add subject-specific MSE for growth curve prediction (NOT IMPLEMENTED).}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to
 the console.}
@@ -45,4 +51,3 @@ The latter column contains the 3 possible subject-level predictions:  fit - trai
 fitgrid - grid-based model predictions, holdout - predictions for holdouts or out-of-sample predictions.
 Some of these predictions might be empty, e.g. when \code{add_holdout = FALSE}, no holdout predictions are made.
 }
-

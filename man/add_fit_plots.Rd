@@ -14,4 +14,3 @@ add_fit_plots(all_preds, ggplot = FALSE)
 \description{
 Add a column to a data frame containing trajectory / velocity plots
 }
-

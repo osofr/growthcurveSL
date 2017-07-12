@@ -4,7 +4,7 @@
 \alias{convert_to_hbgd}
 \title{Wrapper to convert fit object into \code{hbgd}-compatible object}
 \usage{
-convert_to_hbgd(fit_dat_all, data, sexvar = "SEX", method = "default")
+convert_to_hbgd(fit_dat_all, data, sexvar = "sex", method = "default")
 }
 \arguments{
 \item{fit_dat_all}{Dataset produced by calling \code{\link{predict_all}} function.}
@@ -23,4 +23,3 @@ convert_to_hbgd(fit_dat_all, data, sexvar = "SEX", method = "default")
 \description{
 Wrapper to convert fit object into \code{hbgd}-compatible object
 }
-

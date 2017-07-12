@@ -42,4 +42,3 @@ A thin wrapper for \code{define_features_drop}, \code{define_tgrid} and \code{pr
 Evaluates predictions from the existing SuperLearner fit using an entire grid of time points.
 Optionally, when \code{file.name} is not \code{NULL}, the resulting dataset of predictions is saved as a csv file.
 }
-

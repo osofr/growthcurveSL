@@ -58,8 +58,11 @@ test.combine.all.model.fits <- function() {
   library("xgboost")
   library("gridisl")
   library("growthcurveSL")
-  options(growthcurveSL.verbose = FALSE)
-  options(gridisl.verbose = FALSE)
+  options(growthcurveSL.verbose = TRUE)
+  options(gridisl.verbose = TRUE)
+
+  # options(growthcurveSL.verbose = FALSE)
+  # options(gridisl.verbose = FALSE)
 
   data(cpp)
   cpp <- cpp[!is.na(cpp[, "haz"]), ]
@@ -67,12 +70,14 @@ test.combine.all.model.fits <- function() {
 
   ## We start by adding an random indicator for holdout observations.
   ## The holdout SuperLearner will use these holdouts for model comparison.
-  cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 54321)
+  # cpp_holdout <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 54321)
+  cpp <- add_holdout_ind(data = cpp, ID = "subjid", hold_column = "hold", random = TRUE, seed = 54321)
 
   ## Similarly, we define the random validation folds (5 folds),
   ## separating each 5th of each subjects into a separate validation fold.
   ## The cross-validated SuperLearner will use each validation fold for model comparison.
-  cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  # cpp_folds <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
+  cpp <- add_CVfolds_ind(cpp, ID = "subjid", nfolds = 5, seed = 23)
 
   ## --------------------------------------------------------------------------------------------
   ## Fitting Growth Trajectories with Random Holdout SuperLearner
@@ -117,13 +122,14 @@ test.combine.all.model.fits <- function() {
     defModel(estimator = "brokenstick__brokenstick", predict.w.Y = FALSE) +
 
     defModel(estimator = "h2o__gbm", family = "gaussian",
-             search_criteria = list(strategy = "RandomDiscrete", max_models = 10),
+             search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
              param_grid = h2o_GBM_hyper,
              stopping_rounds = 4, stopping_metric = "MSE",
              seed = 123456) +
 
     defModel(estimator = "xgboost__gbm", family = "gaussian",
-             search_criteria = list(strategy = "RandomDiscrete", max_models = 30),
+             search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
+             # search_criteria = list(strategy = "RandomDiscrete", max_models = 30),
              param_grid = xgb_GBM_hyper,
              early_stopping_rounds = 4,
              seed = 123456)
@@ -145,7 +151,8 @@ test.combine.all.model.fits <- function() {
                            t_name = "agedays",
                            x = c("agedays", covars),
                            y = "haz",
-                           data = cpp_holdout,
+                           # data = cpp_holdout,
+                           data = cpp,
                            hold_column = "hold",
                            method = "holdout",
                            use_new_features = TRUE)
@@ -157,8 +164,8 @@ test.combine.all.model.fits <- function() {
   ## The resulting dataset consist of a single row per subject.
   ## The column "fit" will contain the subject specific predictions of the growth trajectories.
   ## --------------------------------------------------------------------------------------------
-  all_preds_holdSL <- predict_all(mfit_holdSL, cpp_holdout) %>%
-                      convert_to_hbgd(cpp_holdout, "sex", "holdSuperLearner")
+  all_preds_holdSL <- predict_all(mfit_holdSL, cpp) %>%
+                      convert_to_hbgd(cpp, "sex", "holdSuperLearner")
 
   ## --------------------------------------------------------------------------------------------
   ## Create trajectory plots and visualize all growth trajectories with trelliscopejs R package.
@@ -187,18 +194,18 @@ test.combine.all.model.fits <- function() {
   ## during the fitting of the model).
   ## --------------------------------------------------------------------------------------------
   grid_cvSL <-
-    # defModel(estimator = "h2o__gbm", family = "gaussian",
-    #          search_criteria = list(strategy = "RandomDiscrete", max_models = 10),
-    #          param_grid = h2o_GBM_hyper,
-    #          seed = 123456) +
+    defModel(estimator = "h2o__gbm", family = "gaussian",
+             search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
+             param_grid = h2o_GBM_hyper,
+             seed = 123456) +
 
     defModel(estimator = "xgboost__gbm", family = "gaussian",
-             search_criteria = list(strategy = "RandomDiscrete", max_models = 30),
+             search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
              param_grid = xgb_GBM_hyper,
              seed = 123456)
 
   mfit_SLcv <- fit_growth(grid_cvSL,
-                         data = cpp_folds,
+                         data = cpp,
                          method = "cv",
                          ID = "subjid",
                          t_name = "agedays",
@@ -206,12 +213,11 @@ test.combine.all.model.fits <- function() {
                          y = "haz",
                          fold_column = "fold",
                          use_new_features = TRUE)
-
   ## --------------------------------------------------------------------------------------------
   ## Next, we create a single data set containing the imputed growth trajectories on each subject
   ## --------------------------------------------------------------------------------------------
-  all_preds_cvSL <- predict_all(mfit_SLcv, cpp_holdout) %>%
-                    convert_to_hbgd(cpp_holdout, "sex", "cvSuperLearner")
+  all_preds_cvSL <- predict_all(mfit_SLcv, cpp) %>%
+                        convert_to_hbgd(cpp, "sex", "cvSuperLearner")
 
   ## --------------------------------------------------------------------------------------------
   ## This example shows how the imputed subject trajectories can be visualized with trelliscopejs R package.
@@ -222,6 +228,24 @@ test.combine.all.model.fits <- function() {
     hbgd::add_trajectory_plot() %>%
     dplyr::select_("subjid", "panel") %>%
     trelliscopejs::trelliscope(name = "cvSuperLearner")
+
+  ## --------------------------------------------------------------------------------------------
+  ## Fitting Growth Trajectories with random holdout CV-SuperLearner
+  ## Perform V-fold CV model fitting, but score the models based on a random holdout observation
+  ## for each subject in validation fold
+  ## --------------------------------------------------------------------------------------------
+  mfit_SLholdcv <- fit_growth(grid_cvSL,
+                         data = cpp,
+                         method = "holdout_cv",
+                         ID = "subjid",
+                         t_name = "agedays",
+                         x = c("agedays", covars),
+                         y = "haz",
+                         fold_column = "fold",
+                         hold_column = "hold",
+                         use_new_features = TRUE)
+  all_preds_holdcvSL <- predict_all(mfit_SLholdcv, cpp) %>%
+                        convert_to_hbgd(cpp, "sex", "holdcvSuperLearner")
 
   ## --------------------------------------------------------------------------------------------
   ## Combine all modeling predictions into a single data-base:
@@ -249,7 +273,7 @@ test.combine.all.model.fits <- function() {
   ## of each model is shown below (lower CV-MSE implies a better model fit).
   ## Note that this plot also contains the 95% confidence intervals (CIs) around each estimated CV-MSE.
   ## --------------------------------------------------------------------------------------------
-  make_model_report(mfit_holdSL, K = 10, data = cpp_folds,
+  make_model_report(mfit_holdSL, K = 10, data = cpp,
                      title = paste0("Performance of the holdout SuperLearner for Growth Curve Trajectories with CPP Data"),
                      format = "html", keep_md = FALSE,
                      openFile = TRUE)
@@ -260,9 +284,18 @@ test.combine.all.model.fits <- function() {
   ## the cross-validated mean-squared-error (CV-MSE) for each individual model,
   ## along with the corresponding 95% CIs, as shown below.
   ## --------------------------------------------------------------------------------------------
-  make_model_report(mfit_SLcv, K = 10, data = cpp_folds,
+  make_model_report(mfit_SLcv, K = 10, data = cpp,
                      title = paste0("Performance of CV SuperLearner for Growth Curve Trajectories with CPP Data"),
                      format = "html", keep_md = FALSE,
                      openFile = TRUE)
   plotMSEs(mfit_SLcv, K = 10, interactive = TRUE)
+
+  ## --------------------------------------------------------------------------------------------
+  ## Finally, model performance report for holdout-CV SuperLearner
+  ## --------------------------------------------------------------------------------------------
+  make_model_report(mfit_SLholdcv, K = 10, data = cpp,
+                     title = paste0("Performance of CV SuperLearner for Growth Curve Trajectories with CPP Data"),
+                     format = "html", keep_md = FALSE,
+                     openFile = TRUE)
+  plotMSEs(mfit_SLholdcv, K = 10, interactive = TRUE)
 }

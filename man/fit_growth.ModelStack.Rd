@@ -72,4 +72,3 @@ holdout data-point for each subject (method = "holdout") or
 V-fold cross-validated MSE which uses entire subjects
 (entire growth curves) for model validation (method = "cv").
 }
-

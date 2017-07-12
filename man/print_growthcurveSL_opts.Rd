@@ -15,4 +15,3 @@ Print Current Option Settings for \code{growthcurveSL}
 \seealso{
 \code{\link{set_all_growthcurveSL_options}}
 }
-

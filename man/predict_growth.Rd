@@ -48,4 +48,3 @@ or a data.table with subject level covariates added along with model-based predi
 \description{
 Predict from growth-curve SuperLearner fit
 }
-

@@ -27,4 +27,3 @@ To reset all options to their defaults simply run \code{set_all_growthcurveSL_op
 \seealso{
 \code{\link{growthcurveSLOptions}}, \code{\link{print_growthcurveSL_opts}}
 }
-

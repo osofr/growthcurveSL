@@ -193,7 +193,6 @@ fit_growth.ModelStack <- function(models,
     if (refit) best_fit <- modelfit$refit_best_model(modelfit$OData_train)
 
   } else if (method %in% "holdout") {
-    browser()
     if (is.null(hold_column)) {
       hold_column <- "hold"
       message("...selecting holdout observations...")

@@ -26,6 +26,8 @@
 #'  2. For \code{method = "cv"} the default is to leave use the previous out-of-sample
 #' (holdout) predictions from the training data.
 # @param force_data.table Force the output predictions to be a \code{data.table}
+#' @param stack Stack the predictions from individual models into a single vector of Super Learner predictions (default).
+#' If set to \code{FALSE} the usual by model (by library) predictions are returned for every successful model fit in the library.
 #' @param verbose Set to \code{TRUE} to print messages on status and information to
 #' the console.
 #' @return A data.table of subject level predictions (subject are rows, columns
@@ -38,6 +40,7 @@ predict_growth <- function(modelfit,
                            grid = FALSE,
                            subset_idx = NULL,
                            holdout = FALSE,
+                           stack = TRUE,
                            verbose = getOption("growthcurveSL.verbose")) {
 
   # holdout <- FALSE
@@ -65,15 +68,34 @@ predict_growth <- function(modelfit,
   }
 
   ## Will use the best model retrained on all data for prediction:
-  preds <- predict_generic(modelfit,
-                           newdata,
-                           # predict_only_bestK_models = 1,
-                           add_subject_data = add_subject_data,
-                           subset_idx = subset_idx,
-                           best_only = best_only,
-                           holdout = holdout,
-                           force_data.table = TRUE,
-                           verbose = verbose)
+  # preds_2 <- predict_generic(modelfit, newdata,
+  #                          # predict_only_bestK_models = 1,
+  #                          add_subject_data = add_subject_data,
+  #                          subset_idx = subset_idx,
+  #                          best_only = best_only,
+  #                          holdout = holdout,
+  #                          force_data.table = TRUE,
+  #                          verbose = verbose)
+  # browser()
+
+  preds <- predict_SL(modelfit, newdata,
+                      add_subject_data = FALSE,
+                      subset_idx = subset_idx,
+                      holdout = holdout,
+                      verbose = verbose,
+                      stack = stack)
+
+  if (add_subject_data) {
+    if (is.DataStorageClass(newdata)) newdata <- newdata$dat.sVar
+    # if (missing(newdata)) newdata <- modelfit$OData_train
+    covars <- c(nodes$IDnode, nodes$tnode, modelfit$outvar)
+    ## to protect against an error if some variables are dropped from new data
+    sel_covars <- names(newdata)[names(newdata) %in% covars]
+    predsDT <- newdata[, sel_covars, with = FALSE]
+    if (!is.null(subset_idx)) predsDT <- predsDT[subset_idx, ]
+    predsDT[, (colnames(preds)) := preds]
+    preds <- predsDT
+  }
 
   return(preds)
 }

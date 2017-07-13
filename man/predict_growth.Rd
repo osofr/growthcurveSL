@@ -5,7 +5,7 @@
 \title{Predict from growth-curve SuperLearner fit}
 \usage{
 predict_growth(modelfit, newdata, add_subject_data = FALSE, grid = FALSE,
-  subset_idx = NULL, holdout = FALSE,
+  subset_idx = NULL, holdout = FALSE, stack = TRUE,
   verbose = getOption("growthcurveSL.verbose"))
 }
 \arguments{
@@ -36,6 +36,9 @@ depending on the modeling approach.
 based on validation data.
  2. For \code{method = "cv"} the default is to leave use the previous out-of-sample
 (holdout) predictions from the training data.}
+
+\item{stack}{Stack the predictions from individual models into a single vector of Super Learner predictions (default).
+If set to \code{FALSE} the usual by model (by library) predictions are returned for every successful model fit in the library.}
 
 \item{verbose}{Set to \code{TRUE} to print messages on status and information to
 the console.}

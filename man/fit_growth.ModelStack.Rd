@@ -7,10 +7,10 @@
 \usage{
 fit_growth(...)
 
-\method{fit_growth}{ModelStack}(models, method = c("none", "cv", "holdout"),
-  data, ID, t_name, x, y, nfolds = NULL, fold_column = NULL,
-  hold_column = NULL, hold_random = FALSE, seed = NULL,
-  use_new_features = FALSE, refit = TRUE,
+\method{fit_growth}{ModelStack}(models, method = c("none", "cv", "holdout",
+  "holdout_cv", "SL"), data, ID, t_name, x, y, nfolds = NULL,
+  fold_column = NULL, hold_column = NULL, hold_random = FALSE,
+  seed = NULL, use_new_features = FALSE, refit = TRUE,
   verbose = getOption("gridisl.verbose"), ...)
 }
 \arguments{
@@ -22,8 +22,10 @@ See \code{\link{defModel}} for additional information.}
 
 \item{method}{The type of model selection procedure when fitting several models.
 Possible options are "none" (no model selection),
-"cv" (model selection with V-fold cross-validation), and
-"holdout" (model selection based on validation holdout sample).}
+"holdout" -- model selection based on validation holdout sample;
+"holdout_cv" -- ;
+"cv" -- model selection using V-fold cross-validation;
+"SL" -- perform model stacking (combine all models) with Super Learner using V-fold cross-validation predictions.}
 
 \item{data}{Input dataset, can be a \code{data.frame} or a \code{data.table}.}
 

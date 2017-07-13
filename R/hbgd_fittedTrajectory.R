@@ -2,11 +2,11 @@ who_centile2value <- function(x, p = 50, x_var = "agedays", y_var = "htcm",
   sex = "Female", data = NULL) {
 
   if (!is.null(data)) {
-    x <- hbgd:::v_eval(substitute(x), try(x, silent = TRUE), data)
-    p <- hbgd:::v_eval(substitute(p), try(p, silent = TRUE), data)
-    x_var <- hbgd:::v_eval(substitute(x_var), try(x_var, silent = TRUE), data)
-    y_var <- hbgd:::v_eval(substitute(y_var), try(y_var, silent = TRUE), data)
-    sex <- hbgd:::v_eval(substitute(sex), try(sex, silent = TRUE), data)
+    x <- growthstandards:::v_eval(substitute(x), try(x, silent = TRUE), data)
+    p <- growthstandards:::v_eval(substitute(p), try(p, silent = TRUE), data)
+    x_var <- growthstandards:::v_eval(substitute(x_var), try(x_var, silent = TRUE), data)
+    y_var <- growthstandards:::v_eval(substitute(y_var), try(y_var, silent = TRUE), data)
+    sex <- growthstandards:::v_eval(substitute(sex), try(sex, silent = TRUE), data)
   }
 
   dat <- data.frame(
@@ -25,15 +25,15 @@ who_centile2value <- function(x, p = 50, x_var = "agedays", y_var = "htcm",
   # we need to call this for each unique combination
   centile2value_single_pars <- function(x, y, x_var, y_var, sex) {
     pair <- paste(y_var, x_var, sep = "_")
-    hbgd:::check_pair(pair)
+    growthstandards:::check_pair(pair)
 
-    coefs <- hbgd::who_coefs[[pair]][[sex]]$data
+    coefs <- growthstandards::who_coefs[[pair]][[sex]]$data
 
     # OS added: safety check for missing input
     if (all(is.na(x))) return(NA)
 
     # subset to neighborhood surrounding input
-    idx <- hbgd:::get_coef_idx(x, coefs$x)
+    idx <- growthstandards:::get_coef_idx(x, coefs$x)
 
     coefs <- coefs[idx, , drop = FALSE] # nolint
     if (nrow(coefs) == 1) {
@@ -61,11 +61,11 @@ who_zscore2value <- function(x, z = 0, y_var = "htcm", x_var = "agedays",
   sex = "Female", data = NULL) {
 
   if (!is.null(data)) {
-    x <- hbgd:::v_eval(substitute(x), try(x, silent = TRUE), data)
-    z <- hbgd:::v_eval(substitute(z), try(z, silent = TRUE), data)
-    x_var <- hbgd:::v_eval(substitute(x_var), try(x_var, silent = TRUE), data)
-    y_var <- hbgd:::v_eval(substitute(y_var), try(y_var, silent = TRUE), data)
-    sex <- hbgd:::v_eval(substitute(sex), try(sex, silent = TRUE), data)
+    x <- growthstandards:::v_eval(substitute(x), try(x, silent = TRUE), data)
+    z <- growthstandards:::v_eval(substitute(z), try(z, silent = TRUE), data)
+    x_var <- growthstandards:::v_eval(substitute(x_var), try(x_var, silent = TRUE), data)
+    y_var <- growthstandards:::v_eval(substitute(y_var), try(y_var, silent = TRUE), data)
+    sex <- growthstandards:::v_eval(substitute(sex), try(sex, silent = TRUE), data)
   }
 
   who_centile2value(p = 100 * pnorm(z), x = x, y_var = y_var, x_var = x_var, sex = sex)

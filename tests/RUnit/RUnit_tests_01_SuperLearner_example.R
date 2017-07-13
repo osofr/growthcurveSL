@@ -34,9 +34,11 @@ notest.install.software <- function() {
   install.packages("face")
 
   ## ------------------------------------------------------------------------
-  ## Installing hbgd R package:
+  ## Installing hbgd-related R packages:
   ## ------------------------------------------------------------------------
-  devtools::install_github('hafen/hbgd', ref = "tidy")
+  # devtools::install_github('hafen/hbgd', ref = "tidy")
+  devtools::install_github('hafen/hbgd')
+  devtools::install_github("HBGDki/growthstandards")
 
   ## ------------------------------------------------------------------------
   ## Installing trelliscopejs for the visualization of the imputed growth trajectories:
@@ -84,7 +86,8 @@ test.combine.all.model.fits <- function() {
   ## --------------------------------------------------------------------------------------------
   ## First we define the grid of hyper parameters for h2o GBM
   h2o_GBM_hyper <- list(
-    ntrees = c(20, 50, 100),
+    ntrees = c(20),
+    # ntrees = c(20, 50, 100),
     learn_rate = c(.05, .1, .2),
     max_depth = c(3, 6, 10, 15),
     sample_rate = c(.5, .75, .9, 1),
@@ -93,7 +96,8 @@ test.combine.all.model.fits <- function() {
   )
   ## Similarly, we define the grid of hyper parameters for xgboost
   xgb_GBM_hyper = list(
-    nrounds = c(20, 50, 100),
+    nrounds = c(20),
+    # nrounds = c(20, 50, 100),
     learning_rate = c(.05, .1, .2),
     max_depth = c(3, 6, 10, 15),
     subsample = c(.5, .75, .9, 1),
@@ -178,9 +182,8 @@ test.combine.all.model.fits <- function() {
     trelliscopejs::trelliscope(name = "holdSuperLearner")
 
   ## --------------------------------------------------------------------------------------------
-  ## Fitting Growth Trajectories with Cross-Validation SuperLearner
+  ## Fitting Growth Trajectories with Cross-Validation Discrete SuperLearner
   ## --------------------------------------------------------------------------------------------
-
   ## --------------------------------------------------------------------------------------------
   ## Fit the growth trajectories using the novel cross-validated discrete SuperLearner (CV SuperLearner).
   ## The CV SuperLearner is enabled by specifying the argument method = "cv".
@@ -198,13 +201,12 @@ test.combine.all.model.fits <- function() {
              search_criteria = list(strategy = "RandomDiscrete", max_models = 2),
              param_grid = h2o_GBM_hyper,
              seed = 123456) +
-
     defModel(estimator = "xgboost__gbm", family = "gaussian",
              search_criteria = list(strategy = "RandomDiscrete", max_models = 5),
              param_grid = xgb_GBM_hyper,
              seed = 123456)
 
-  mfit_SLcv <- fit_growth(grid_cvSL,
+  mfit_dSL <- fit_growth(grid_cvSL,
                          data = cpp,
                          method = "cv",
                          ID = "subjid",
@@ -213,17 +215,51 @@ test.combine.all.model.fits <- function() {
                          y = "haz",
                          fold_column = "fold",
                          use_new_features = TRUE)
+
+  dSLpreds_best <- predict_growth(mfit_dSL, cpp)
+
   ## --------------------------------------------------------------------------------------------
   ## Next, we create a single data set containing the imputed growth trajectories on each subject
   ## --------------------------------------------------------------------------------------------
-  all_preds_cvSL <- predict_all(mfit_SLcv, cpp) %>%
-                        convert_to_hbgd(cpp, "sex", "cvSuperLearner")
+  all_preds_dSL <- predict_all(mfit_dSL, cpp) %>%
+                    convert_to_hbgd(cpp, "sex", "dSL")
 
   ## --------------------------------------------------------------------------------------------
   ## This example shows how the imputed subject trajectories can be visualized with trelliscopejs R package.
   ## These plots will include the predictions for all holdout observations,
   ## which can be used to visually inspect the quality of the model fit.
   ## --------------------------------------------------------------------------------------------
+  all_preds_dSL %>%
+    hbgd::add_trajectory_plot() %>%
+    dplyr::select_("subjid", "panel") %>%
+    trelliscopejs::trelliscope(name = "dSL")
+
+  ## --------------------------------------------------------------------------------------------
+  ## Fitting Growth Trajectories with Cross-Validation Stacked SuperLearner
+  ## Combine all models in a single prediction using convex combination (model stacking)
+  ## --------------------------------------------------------------------------------------------
+  mfit_cvSL <- fit_growth(grid_cvSL,
+                         data = cpp,
+                         method = "SL",
+                         ID = "subjid",
+                         t_name = "agedays",
+                         x = c("agedays", covars),
+                         y = "haz",
+                         fold_column = "fold",
+                         use_new_features = TRUE)
+
+  SLpreds <- predict_growth(mfit_cvSL)
+  SLpreds[]
+  SLpredsb <- predict_growth(mfit_cvSL, add_subject_data = TRUE)
+  SLpredsb[]
+
+  SLpreds2 <- predict_growth(mfit_cvSL, cpp)
+  SLpreds2[]
+  SLpreds2b <- predict_growth(mfit_cvSL, cpp, add_subject_data = TRUE)
+  SLpreds2b[]
+
+  all_preds_cvSL <- predict_all(mfit_cvSL, cpp) %>%
+                    convert_to_hbgd(cpp, "sex", "cvSuperLearner")
   all_preds_cvSL %>%
     hbgd::add_trajectory_plot() %>%
     dplyr::select_("subjid", "panel") %>%
@@ -244,19 +280,29 @@ test.combine.all.model.fits <- function() {
                          fold_column = "fold",
                          hold_column = "hold",
                          use_new_features = TRUE)
+
   all_preds_holdcvSL <- predict_all(mfit_SLholdcv, cpp) %>%
-                        convert_to_hbgd(cpp, "sex", "holdcvSuperLearner")
+                        convert_to_hbgd(cpp, "sex", "hold_dSL")
 
   ## --------------------------------------------------------------------------------------------
   ## Combine all modeling predictions into a single data-base:
   ## --------------------------------------------------------------------------------------------
-  all_preds_combined <- (all_preds_BS %>% rename(brokenstick = fit)) %>%
-                         left_join(
-                          all_preds_holdSL %>% rename(holdoutSL = fit)
+  all_preds_combined <- #(all_preds_BS %>% rename(brokenstick = fit)) %>%
+                         #left_join(
+                          (all_preds_holdSL %>% rename(holdoutSL = fit)
                           ) %>%
                          left_join(
-                          all_preds_cvSL %>% rename(cvSL = fit)
+                          all_preds_dSL %>% rename(discreteSL = fit)
+                          ) %>%
+                         left_join(
+                           all_preds_cvSL %>% rename(cvSL = fit)
                           )
+
+  all_preds_combined[1, ][["discreteSL"]][[1]][["fitgrid"]]
+  all_preds_combined[1, ][["cvSL"]][[1]][["fitgrid"]]
+
+  all_preds_combined[1, ][["discreteSL"]][[1]][["holdout"]]
+  all_preds_combined[1, ][["cvSL"]][[1]][["holdout"]]
 
   ## --------------------------------------------------------------------------------------------
   ## Assessment of Individual Model Performance

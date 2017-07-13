@@ -68,8 +68,10 @@ fit_growth <- function(...) { UseMethod("fit_growth") }
 #' See \code{\link{defModel}} for additional information.
 #' @param method The type of model selection procedure when fitting several models.
 #' Possible options are "none" (no model selection),
-#' "cv" (model selection with V-fold cross-validation), and
-#' "holdout" (model selection based on validation holdout sample).
+#' "holdout" -- model selection based on validation holdout sample;
+#' "holdout_cv" -- ;
+#' "cv" -- model selection using V-fold cross-validation;
+#' "SL" -- perform model stacking (combine all models) with Super Learner using V-fold cross-validation predictions.
 #' @param data Input dataset, can be a \code{data.frame} or a \code{data.table}.
 #' @param ID A character string name of the column that contains the unique subject identifiers.
 #' @param t_name A character string name of the column with integer-valued measurement time-points
@@ -100,7 +102,7 @@ fit_growth <- function(...) { UseMethod("fit_growth") }
 # @example tests/examples/1_gridisl_example.R
 #' @export
 fit_growth.ModelStack <- function(models,
-                                  method = c("none", "cv", "holdout"),
+                                  method = c("none", "cv", "holdout", "holdout_cv", "SL"),
                                   data,
                                   ID,
                                   t_name,
@@ -136,8 +138,8 @@ fit_growth.ModelStack <- function(models,
   }
 
   if (!is.ModelStack(models)) stop("argument models must be of class 'ModelStack'")
-  if (!(method %in% c("none", "cv", "holdout", "holdout_cv")))
-    stop("argument method must be one of: 'none', 'cv', 'holdout', 'holdout_cv'")
+  if (!(method %in% c("none", "cv", "holdout", "holdout_cv", "SL")))
+    stop("argument method must be one of: 'none', 'cv', 'holdout', 'holdout_cv', 'SL'")
   if (!data.table::is.data.table(data) && !is.DataStorageClass(data))
     stop("argument data must be of class 'data.table, please convert the existing data.frame to data.table by calling 'data.table::as.data.table(...)'")
 
@@ -155,7 +157,7 @@ fit_growth.ModelStack <- function(models,
     data <- define_features_drop(data, ID = ID, t_name = t_name, y = y, train_set = TRUE)
     modelfit <- gridisl::fit_model(ID, t_name, x, y, data, models = models, verbose = verbose, ...)
 
-  } else if (method %in% c("cv","holdout_cv")) {
+  } else if (method %in% c("cv","holdout_cv", "SL")) {
 
     if (is.null(fold_column)) {
       fold_column <- "fold"
@@ -166,7 +168,7 @@ fit_growth.ModelStack <- function(models,
     fun_train_cv <- feature_data_cv(ID, t_name, y, train_set = TRUE)
     train_data <- fun_train_cv(data)
 
-    if (method %in% "cv") {
+    if (method %in% c("cv", "SL")) {
       ## Define validation data to be used for scoring during CV (each summary row (X_i,Y_i) is created by first dropping this row):
       fun_valid_cv <- feature_data_cv(ID, t_name, y, train_set = FALSE)
       valid_data <- fun_valid_cv(data)
@@ -189,8 +191,25 @@ fit_growth.ModelStack <- function(models,
     }
 
     modelfit <- gridisl::fit_model(ID, t_name, x, y, train_data = train_data, models = models, fold_column = fold_column, valid_data = valid_data)
-    message("...retraining the best model on all data...")
-    if (refit) best_fit <- modelfit$refit_best_model(modelfit$OData_train)
+
+    if (method %in% "SL") {
+      message("...performing model stacking using Super Learner...")
+      # browser()
+      # modelfit$get_out_of_sample_preds
+      # Zpreds_wrong <- predict_generic(modelfit, add_subject_data = FALSE, best_only = FALSE, holdout = TRUE)
+      # modelfit$predict_out_of_sample(newdata = valid_data, best_only = FALSE, ...)
+      Zpreds <- predict_generic(modelfit, valid_data, add_subject_data = FALSE, best_only = FALSE, holdout = TRUE)
+      Yvals <- get_yvalues(modelfit, ...)
+      Wtsvals <- rep.int(1L, length(Yvals))
+      SL_method <- SuperLearner::method.NNLS()
+      modelfit$SL_method <- SL_method
+      SL_coefs <- SL_method$computeCoef(Z = as.matrix(Zpreds), Y = Yvals, obsWeights = Wtsvals, libraryNames = names(Zpreds), verbose = TRUE)
+      modelfit$SL_coefs <- SL_coefs
+      class(modelfit) <- c("PredictionSL", class(modelfit))
+    } else if (refit) {
+      message("...retraining the best model on all data...")
+      best_fit <- modelfit$refit_best_model(modelfit$OData_train)
+    }
 
   } else if (method %in% "holdout") {
     if (is.null(hold_column)) {

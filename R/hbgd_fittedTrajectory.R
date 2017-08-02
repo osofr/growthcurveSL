@@ -172,7 +172,10 @@ convert_to_hbgd <- function(fit_dat_all, data, sexvar = "sex", method = "default
       fun_y_to_z = who_hcircm2zscore
 
     } else {
-      stop("unrecognized outcome: " %+% Ynode)
+      message("unrecognized outcome, will not be transforming to raw/z-score: " %+% Ynode)
+      xy_pair_name = c("agedays",Ynode)
+      fun_y_to_raw = function(x, y, ...) return(y)
+      fun_y_to_z = function(x, y, ...) return(y)
     }
 
     fit_dat_hbgd <- data %>%

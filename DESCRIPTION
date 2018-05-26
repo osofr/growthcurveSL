@@ -33,6 +33,10 @@ Suggests:
     RUnit,
     trelliscopejs,
     xgboost
+Remotes: 
+    HBGDki/growthstandards,
+    hafen/hbgd,
+    osofr/gridisl
 License: MIT + file LICENSE
 LazyData: true
 RoxygenNote: 6.0.1
